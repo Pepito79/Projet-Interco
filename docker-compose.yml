@@ -1,5 +1,7 @@
 version: '3'
 
+#On réserve les .254 pour les gateway
+
 services:
   # ==============================================================================
   # AS 1 : OSPF AREA (120.0.32.0/20)
@@ -16,25 +18,11 @@ services:
       - ./AS1/Router/R_FAI_1/daemons:/etc/frr/daemons
     entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
     networks:
-      - link_fai1_boxb1    # eth0 (120.0.32.0/24)
-      - link_fai1_boxc1    # eth1 (120.0.33.0/24)
-      - link_fai1_rent1    # eth2 (120.0.34.0/24)
-      - link_fai1_r11      # eth3 (120.0.35.0/24)
-      - link_fai1_bordure1 # eth4 (Vers Bordure)
-
-  # --- BORDURE AS1 (Sortie vers AS2) ---
-  r_bordure_1:
-    image: frrouting/frr:latest
-    container_name: R_bordure_1
-    cap_add: [NET_ADMIN, SYS_ADMIN]
-    volumes:
-      - ./AS1/Router/R_bordure_1/init.sh:/usr/local/bin/init.sh
-      - ./AS1/Router/R_bordure_1/frr.conf:/etc/frr/frr.conf
-      - ./AS1/Router/R_bordure_1/daemons:/etc/frr/daemons
-    entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
-    networks:
-      - link_fai1_bordure1 # eth0 (Interne AS1)
-      - link_inter_as      # eth1 (Externe BGP - 10.0.0.0/30)
+      - link_fai1_rent1     #eth0 (120.0.34.0/24)
+      - link_fai1_r11      #eth1 (120.0.35.0/24)
+      - link_fai1_r12       #eth2 (120.0.39.0/24)
+      - link_fai1_boxc1    #eth3  (120.0.33.0/24)
+      - link_fai1_boxb1    #eth4 (120.0.32.0/24)
 
   # --- BRANCHE BOX B1 ---
   box_b1:
@@ -47,8 +35,8 @@ services:
       - ./AS1/Box/Box_B1/daemons:/etc/frr/daemons
     entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
     networks:
-      - net_b1_lan         # eth0 (192.168.1.0/24)
-      - link_fai1_boxb1    # eth1 (WAN)
+      - link_fai1_boxb1    # eth0 (120.0.32.0/24)
+      - net_b1_lan         # eth1 (192.168.1.0/24)
 
   client_b1:
     image: alpine:latest
@@ -58,7 +46,7 @@ services:
       - ./AS1/Client/Client_B1/init.sh:/init.sh
     entrypoint: ["/bin/sh", "/init.sh"]
     networks:
-      - net_b1_lan
+      - net_b1_lan    # eth0 (192.168.1.0/24)
 
   serveur_b1:
     image: alpine:latest
@@ -70,7 +58,7 @@ services:
     # On exécute le script au démarrage
     entrypoint: ["/bin/sh", "/init.sh"]
     networks:
-      - net_b1_lan
+      - net_b1_lan    # eth0 (192.168.1.0/24)
 
   # --- BRANCHE BOX C1 ---
   box_c1:
@@ -83,9 +71,9 @@ services:
       - ./AS1/Box/Box_C1/daemons:/etc/frr/daemons
     entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
     networks:
-      - net_c1_lan         # eth0 (192.168.2.0/24)
-      - link_fai1_boxc1    # eth1 (WAN)
-
+      - link_fai1_boxc1    # eth0 (120.0.33.0/24)
+      - net_c1_lan         # eth1 (192.168.2.0/24)
+      
   client_c1:
     image: alpine:latest
     container_name: Client_C1
@@ -94,7 +82,7 @@ services:
       - ./AS1/Client/Client_C1/init.sh:/init.sh
     entrypoint: ["/bin/sh", "/init.sh"]
     networks:
-      - net_c1_lan
+      - net_c1_lan    #eth0
 
   # --- BRANCHE ENTREPRISE 1 ---
   r_entreprise1:
@@ -107,8 +95,8 @@ services:
       - ./AS1/Router/R_Entreprise1/daemons:/etc/frr/daemons
     entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
     networks:
-      - net_ent1_lan       # eth0 (10.10.10.0/24)
-      - link_fai1_rent1    # eth1 (WAN)
+      - link_fai1_rent1    # eth0 (120.0.34.0/24)
+      - net_ent1_lan       # eth1 (10.10.10.0/24)
 
   # ... (Dans la section AS 1 / BRANCHE ENTREPRISE 1)
 
@@ -121,7 +109,7 @@ services:
       - ./AS1/Serveur/Serveur_Entreprise_1/init.sh:/init.sh
     entrypoint: ["/bin/sh", "/init.sh"]
     networks:
-      - net_ent1_lan
+      - net_ent1_lan  #eth0 (10.10.10.0/24)
 
   client_entreprise_1:
     image: alpine:latest
@@ -131,7 +119,7 @@ services:
       - ./AS1/Client/Client_Ent1/init.sh:/init.sh
     entrypoint: ["/bin/sh", "/init.sh"]
     networks:
-      - net_ent1_lan
+      - net_ent1_lan  #eth0 (10.10.10.0/24)
 
   # --- BRANCHE SERVICES (WEB/DNS) ---
   r11:
@@ -144,9 +132,9 @@ services:
       - ./AS1/Router/R11/daemons:/etc/frr/daemons
     entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
     networks:
-      - link_fai1_r11      # eth0 (Vers FAI)
-      - link_r11_r12       # eth1 (Vers R12)
-      - net_web1           # eth2 (Vers Serveur Web)
+      - link_fai1_r11      # eth0 (120.0.35.0/24)
+      - link_r11_r12       # eth1 (120.0.38.0/24)
+      - net_web1           # eth2 (120.0.37.0/24)
 
   r12:
     image: frrouting/frr:latest
@@ -158,8 +146,9 @@ services:
       - ./AS1/Router/R12/daemons:/etc/frr/daemons
     entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
     networks:
-      - link_r11_r12       # eth0 (Vers R11)
-      - net_dns1           # eth1 (Vers DNS)
+      - link_fai1_r12  #eth0 (120.0.39.0/24)
+      - net_dns1           # eth1 (120.0.36.0/24)
+      - link_r11_r12       # eth2 (120.0.38.0/24)
 
   serveur_web1:
     image: alpine:latest
@@ -170,7 +159,7 @@ services:
       - ./AS1/Serveur/Serveur_Web1/init.sh:/init.sh
     entrypoint: ["/bin/sh", "/init.sh"]
     networks:
-      - net_web1
+      - net_web1  #eth0 (120.0.37.0/24)
 
   dns_1:
     image: alpine:latest
@@ -181,68 +170,8 @@ services:
       - ./AS1/Services/DNS_1/init.sh:/init.sh
     entrypoint: ["/bin/sh", "/init.sh"]
     networks:
-      - net_dns1
+      - net_dns1  #eth0 (120.0.36.0/24)
 
-  # ==============================================================================
-  # AS 2 : RIP AREA
-  # ==============================================================================
-
-  # Note : Comme le schéma montre un lien direct vers le bas depuis R_bordure_1,
-  # on suppose un routeur d'entrée dans l'AS2.
-
-  r_fai_2: # Agit aussi comme bordure ici pour simplifier, ou connectez-le à un R_bordure_2
-    image: frrouting/frr:latest
-    container_name: R_FAI_2
-    cap_add: [NET_ADMIN, SYS_ADMIN]
-    volumes:
-      - ./AS2/Router/R_FAI_2/init.sh:/usr/local/bin/init.sh
-      - ./AS2/Router/R_FAI_2/frr.conf:/etc/frr/frr.conf
-      - ./AS2/Router/R_FAI_2/daemons:/etc/frr/daemons
-    entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
-    networks:
-      - link_inter_as      # eth0 (Vers AS1 - BGP)
-      - link_fai2_boxb2    # eth1
-      - link_fai2_rent2    # eth2
-
-  box_b2:
-    image: frrouting/frr:latest
-    container_name: Box_B2
-    cap_add: [NET_ADMIN, SYS_ADMIN]
-    volumes:
-      - ./AS2/Box/Box_B2/init.sh:/usr/local/bin/init.sh
-      - ./AS2/Box/Box_B2/frr.conf:/etc/frr/frr.conf
-    entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
-    networks:
-      - net_b2_lan         # eth0
-      - link_fai2_boxb2    # eth1
-
-  client_b21:
-    image: alpine:latest
-    container_name: Client_B21
-    cap_add: [NET_ADMIN]
-    command: sleep infinity
-    networks:
-      - net_b2_lan
-
-  r_entreprise2:
-    image: frrouting/frr:latest
-    container_name: R_Entreprise2
-    cap_add: [NET_ADMIN, SYS_ADMIN]
-    volumes:
-      - ./AS2/Router/R_Entreprise2/init.sh:/usr/local/bin/init.sh
-      - ./AS2/Router/R_Entreprise2/frr.conf:/etc/frr/frr.conf
-    entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
-    networks:
-      - net_ent2_lan       # eth0
-      - link_fai2_rent2    # eth1
-
-  client_entreprise_2:
-    image: alpine:latest
-    container_name: Client_Entreprise_2
-    cap_add: [NET_ADMIN]
-    command: sleep infinity
-    networks:
-      - net_ent2_lan
 
 # ==============================================================================
 # DÉFINITION DES RÉSEAUX (LES CÂBLES)
@@ -250,40 +179,26 @@ services:
 networks:
   # --- AS 1 ---
   net_b1_lan:
-    ipam: { config: [ { subnet: 192.168.1.0/24 } ] }
+    ipam: { config: [ { subnet: 192.168.1.0/24, gateway:  192.168.1.254 } ] } #on met adresse IP au pif mais qui n'interfère pas avec les adresses IP qu'on attribue
   net_c1_lan:
-    ipam: { config: [ { subnet: 192.168.2.0/24 } ] }
+    ipam: { config: [ { subnet: 192.168.2.0/24, gateway: 192.168.2.254 } ] }
   net_ent1_lan:
-    ipam: { config: [ { subnet: 10.10.10.0/24 } ] }
+    ipam: { config: [ { subnet: 10.10.10.0/24, gateway: 10.10.10.254 } ] }
   
   link_fai1_boxb1:
-    ipam: { config: [ { subnet: 120.0.32.0/24 } ] }
+    ipam: { config: [ { subnet: 120.0.32.0/24, gateway: 120.0.32.254 } ] }
   link_fai1_boxc1:
-    ipam: { config: [ { subnet: 120.0.33.0/24 } ] }
+    ipam: { config: [ { subnet: 120.0.33.0/24, gateway: 120.0.33.254 } ] }
   link_fai1_rent1:
-    ipam: { config: [ { subnet: 120.0.34.0/24 } ] }
+    ipam: { config: [ { subnet: 120.0.34.0/24, gateway: 120.0.34.254 } ] }
   link_fai1_r11:
-    ipam: { config: [ { subnet: 120.0.35.0/24 } ] }
-  link_fai1_bordure1:
-    ipam: { config: [ { subnet: 120.0.39.0/24 } ] } # Subnet déduit (pas clair sur le schéma)
+    ipam: { config: [ { subnet: 120.0.35.0/24, gateway: 120.0.35.254 } ] }
+  link_fai1_r12:
+    ipam: { config: [ { subnet: 120.0.39.0/24, gateway: 120.0.39.254 } ] }
 
   net_web1:
-    ipam: { config: [ { subnet: 120.0.37.0/24 } ] }
+    ipam: { config: [ { subnet: 120.0.37.0/24, gateway: 120.0.37.254 } ] }
   net_dns1:
-    ipam: { config: [ { subnet: 120.0.36.0/24 } ] }
+    ipam: { config: [ { subnet: 120.0.36.0/24, gateway: 120.0.36.254 } ] }
   link_r11_r12:
-    ipam: { config: [ { subnet: 120.0.38.0/24 } ] }
-
-  # --- INTERCONNEXION AS ---
-  link_inter_as:
-    ipam: { config: [ { subnet: 10.0.0.0/30 } ] }
-
-  # --- AS 2 ---
-  link_fai2_boxb2:
-    ipam: { config: [ { subnet: 200.0.1.0/24 } ] }
-  link_fai2_rent2:
-    ipam: { config: [ { subnet: 200.0.2.0/24 } ] }
-  net_b2_lan:
-    ipam: { config: [ { subnet: 192.168.20.0/24 } ] }
-  net_ent2_lan:
-    ipam: { config: [ { subnet: 10.20.20.0/24 } ] }
+    ipam: { config: [ { subnet: 120.0.38.0/24, gateway: 120.0.38.254 } ] }
