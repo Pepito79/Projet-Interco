@@ -23,6 +23,10 @@ echo -e "\n${BLUE}[1/3] Préparation des scripts locaux (chmod)...${NC}"
 
 # On rend exécutables tous les scripts .sh du projet
 find . -name "*.sh" -exec chmod +x {} \;
+# Donne les droits de lecture à tout le monde sur les fichiers de config
+# Rend tous les fichiers de configuration lisibles par tout le monde
+find . -name "frr.conf" -exec chmod 644 {} \;
+find . -name "daemons" -exec chmod 644 {} \;
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ Tous les scripts .sh sont maintenant exécutables.${NC}"
