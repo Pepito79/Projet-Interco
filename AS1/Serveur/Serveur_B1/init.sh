@@ -9,7 +9,7 @@ ip link set dev eth0 up
 ip addr add 192.168.1.3/24 dev eth0
 
 # 2. Route par défaut (Vers la Box B1 en .1)
-ip route add default via 192.168.1.1
+ip route add default via 192.168.101.1
 
 # 3. Lancement du service
 # Pour l'instant on fait une pause infinie pour garder le serveur allumé.

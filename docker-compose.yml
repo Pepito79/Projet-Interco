@@ -133,8 +133,9 @@ services:
     entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
     networks:
       - link_fai1_r11      # eth0 (120.0.35.0/24)
-      - link_r11_r12       # eth1 (120.0.38.0/24)
       - net_web1           # eth2 (120.0.37.0/24)
+      - link_r11_r12       # eth1 (120.0.38.0/24)
+      
 
   r12:
     image: frrouting/frr:latest
@@ -179,7 +180,7 @@ services:
 networks:
   # --- AS 1 ---
   net_b1_lan:
-    ipam: { config: [ { subnet: 192.168.1.0/24, gateway:  192.168.1.254 } ] } #on met adresse IP au pif mais qui n'interfère pas avec les adresses IP qu'on attribue
+    ipam: { config: [ { subnet: 192.168.101.0/24, gateway:  192.168.101.254 } ] } #on met adresse IP au pif mais qui n'interfère pas avec les adresses IP qu'on attribue
   net_c1_lan:
     ipam: { config: [ { subnet: 192.168.2.0/24, gateway: 192.168.2.254 } ] }
   net_ent1_lan:

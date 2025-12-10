@@ -13,7 +13,7 @@ ip addr add 120.0.32.2/24 dev eth0
 ip addr flush dev eth1
 ip link set dev eth1 up
 # Adresse de la passerelle LAN
-ip addr add 192.168.1.1/24 dev eth1
+ip addr add 192.168.101.1/24 dev eth1
 
 # Lancement de FRRouting
 /usr/lib/frr/docker-start
