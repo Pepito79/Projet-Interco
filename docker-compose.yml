@@ -24,6 +24,8 @@ services:
   r_fai_1:
     image: frrouting/frr:latest
     container_name: R_FAI_1
+    privileged: true
+    hostname : R_FAI_1
     cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
       - ./AS1/Router/R_FAI_1/init.sh:/usr/local/bin/init.sh
@@ -41,6 +43,7 @@ services:
   box_b1:
     image: frrouting/frr:latest
     container_name: Box_B1
+    privileged: true
     cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
       - ./AS1/Box/Box_B1/init.sh:/usr/local/bin/init.sh
@@ -77,6 +80,7 @@ services:
   box_c1:
     image: frrouting/frr:latest
     container_name: Box_C1
+    privileged: true
     cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
       - ./AS1/Box/Box_C1/init.sh:/usr/local/bin/init.sh
@@ -101,6 +105,7 @@ services:
   r_entreprise1:
     image: frrouting/frr:latest
     container_name: R_Entreprise1
+    privileged: true
     cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
       - ./AS1/Router/R_Entreprise1/init.sh:/usr/local/bin/init.sh
@@ -138,6 +143,7 @@ services:
   r11:
     image: frrouting/frr:latest
     container_name: R11
+    privileged: true
     cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
       - ./AS1/Router/R11/init.sh:/usr/local/bin/init.sh
@@ -153,6 +159,7 @@ services:
   r12:
     image: frrouting/frr:latest
     container_name: R12
+    privileged: true
     cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
       - ./AS1/Router/R12/init.sh:/usr/local/bin/init.sh
