@@ -113,7 +113,7 @@ services:
 
   client_entreprise_1:
     image: alpine:latest
-    container_name: Client_Entreprise_1
+    container_name: Client_Ent1
     cap_add: [NET_ADMIN]
     volumes:
       - ./AS1/Client/Client_Ent1/init.sh:/init.sh
