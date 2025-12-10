@@ -5,9 +5,8 @@ echo "--- Config Serveur B1 ---"
 # 1. Nettoyage et adressage IP
 # D'après le schéma, le serveur est en .2
 ip addr flush dev eth0
-ip link set dev eth0 down
-ip addr add 192.168.1.2/24 dev eth0
 ip link set dev eth0 up
+ip addr add 192.168.1.3/24 dev eth0
 
 # 2. Route par défaut (Vers la Box B1 en .1)
 ip route add default via 192.168.1.1

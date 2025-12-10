@@ -4,9 +4,8 @@ echo "--- Config Serveur Entreprise 1 ---"
 
 # 1. Configuration IP (10.10.10.3)
 ip addr flush dev eth0
-ip link set dev eth0 down
-ip addr add 10.10.10.3/24 dev eth0
 ip link set dev eth0 up
+ip addr add 10.10.10.2/24 dev eth0
 
 # 2. Route par défaut vers le routeur d'entreprise
 ip route add default via 10.10.10.1
