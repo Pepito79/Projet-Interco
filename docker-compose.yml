@@ -1,6 +1,19 @@
 version: '3'
 
 #On réserve les .254 pour les gateway
+#ATTENTION LES LIENS DOCKERS SE FONT PAR ORDRE ALPAHBETIQUE
+#dans l'ordre:
+#link_fai1_boxb1
+#link_fai1_boxc1
+#link_fai1_r11
+#link_fai1_r12
+#link_fai1_rent1
+#link_r11_r12
+#net_b1_lan
+#net_c1_lan
+#net_dns1
+#net_ent1_lan
+#net_web1
 
 services:
   # ==============================================================================
@@ -18,11 +31,11 @@ services:
       - ./AS1/Router/R_FAI_1/daemons:/etc/frr/daemons
     entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
     networks:
-      - link_fai1_rent1     #eth0 (120.0.34.0/24)
-      - link_fai1_r11      #eth1 (120.0.35.0/24)
-      - link_fai1_r12       #eth2 (120.0.39.0/24)
-      - link_fai1_boxc1    #eth3  (120.0.33.0/24)
-      - link_fai1_boxb1    #eth4 (120.0.32.0/24)
+      - link_fai1_boxb1    #eth0 (120.0.32.0/24)
+      - link_fai1_boxc1    #eth1  (120.0.33.0/24)
+      - link_fai1_r11      #eth2 (120.0.35.0/24)
+      - link_fai1_r12       #eth3 (120.0.39.0/24)
+      - link_fai1_rent1     #eth4 (120.0.34.0/24)
 
   # --- BRANCHE BOX B1 ---
   box_b1:
@@ -133,8 +146,8 @@ services:
     entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
     networks:
       - link_fai1_r11      # eth0 (120.0.35.0/24)
-      - net_web1           # eth2 (120.0.37.0/24)
       - link_r11_r12       # eth1 (120.0.38.0/24)
+      - net_web1           # eth2 (120.0.37.0/24)
       
 
   r12:
@@ -147,9 +160,9 @@ services:
       - ./AS1/Router/R12/daemons:/etc/frr/daemons
     entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
     networks:
-      - link_fai1_r12  #eth0 (120.0.39.0/24)
-      - net_dns1           # eth1 (120.0.36.0/24)
-      - link_r11_r12       # eth2 (120.0.38.0/24)
+      - link_fai1_r12      # eth0 (120.0.39.0/24)
+      - link_r11_r12       # eth1 (120.0.38.0/24)
+      - net_dns1           # eth2 (120.0.36.0/24)
 
   serveur_web1:
     image: alpine:latest
