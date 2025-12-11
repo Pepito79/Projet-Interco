@@ -107,7 +107,7 @@ services:
       - NET_ADMIN
       - SYS_ADMIN
 
-  # Box_C1 (Version Routeur de l'Ami)
+  # Box_C1
   Box_C1:
     image: frrouting/frr
     container_name: Box_C1
@@ -175,8 +175,7 @@ services:
       - NET_ADMIN
       - SYS_ADMIN
 
-  # --- END DEVICES (PC & SERVEURS) ---
-
+  # End Devices (Simulating Hosts)
   Client_B1:
     image: alpine
     container_name: Client_B1
@@ -197,31 +196,19 @@ services:
     cap_add:
       - NET_ADMIN
 
-  # --- CLIENT VPN (TON CONFIG) ---
+  # --- CLIENT C1 (VPN) ---
   Client_C1:
-    image: image-vpn:v1
+    image: image-vpn:v1    # Ton image VPN
     container_name: Client_C1
+    privileged: true       # Indispensable pour /dev/net/tun
     cap_add: [NET_ADMIN]
     volumes:
-      - ./AS1/Client/Client_C1/init.sh:/init.sh
+      - ./scripts/Client_C1.sh:/init.sh  # Ton script de démarrage
     entrypoint: ["/bin/sh", "/init.sh"]
     networks:
       net_c1:
         ipv4_address: 192.168.2.10
 
-  # --- SERVEUR VPN (TON CONFIG) ---
-  Serveur_Entreprise_1:
-    image: image-vpn:v1
-    container_name: Serveur_Entreprise_1
-    cap_add: [NET_ADMIN]
-    volumes:
-      - ./AS1/Serveur/Serveur_Entreprise_1/init.sh:/init.sh
-    entrypoint: ["/bin/sh", "/init.sh"]
-    networks:
-      net_ent:
-        ipv4_address: 10.10.10.3
-
-  # Autres services web/dns
   Serveur_Web1:
     image: alpine
     container_name: Serveur_Web1
@@ -237,12 +224,28 @@ services:
   DNS_1:
     image: alpine
     container_name: DNS_1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.36.1 && apk add --no-cache dnsmasq && echo '120.0.37.2 www.siteglobal.com' >> /etc/hosts && dnsmasq -k --log-queries --log-facility=- --user=root --interface=eth0 --bind-interfaces"
+    volumes:
+      - ./config/DNS_1/dnsmasq.conf:/etc/dnsmasq.conf
+      - ./config/DNS_1/hosts:/etc/dnsmasq.hosts
+    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.36.1 && apk add --no-cache dnsmasq && dnsmasq -k -C /etc/dnsmasq.conf"
     networks:
       net_36:
         ipv4_address: 120.0.36.2
     cap_add:
       - NET_ADMIN
+
+  # --- SERVEUR ENTREPRISE (VPN) ---
+  Serveur_Entreprise_1:
+    image: image-vpn:v1     # Ton image VPN
+    container_name: Serveur_Entreprise_1
+    privileged: true        # Indispensable pour /dev/net/tun
+    cap_add: [NET_ADMIN]
+    volumes:
+      - ./scripts/Serveur_Entreprise_1.sh:/init.sh  # Ton script de démarrage
+    entrypoint: ["/bin/sh", "/init.sh"]
+    networks:
+      net_ent:
+        ipv4_address: 10.10.10.3
 
   Client_Ent1:
     image: alpine
@@ -250,6 +253,6 @@ services:
     command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
     networks:
       net_ent:
-        ipv4_address: 10.10.10.4
+        ipv4_address: 10.10.10.2
     cap_add:
       - NET_ADMIN
