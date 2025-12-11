@@ -179,7 +179,7 @@ services:
   Client_B1:
     image: alpine
     container_name: Client_B1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.101.1 && sleep infinity"
+    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.101.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
     networks:
       net_b1:
         ipv4_address: 192.168.101.2
@@ -199,7 +199,7 @@ services:
   Client_C1:
     image: alpine
     container_name: Client_C1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.2.1 && sleep infinity"
+    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.2.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
     networks:
       net_c1:
         ipv4_address: 192.168.2.2
@@ -209,7 +209,9 @@ services:
   Serveur_Web1:
     image: alpine
     container_name: Serveur_Web1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.37.1 && sleep infinity"
+    volumes:
+      - ./config/web:/var/www/html
+    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.37.1 && apk add --no-cache python3 && cd /var/www/html && python3 -m http.server 80"
     networks:
       net_37:
         ipv4_address: 120.0.37.2
@@ -219,7 +221,7 @@ services:
   DNS_1:
     image: alpine
     container_name: DNS_1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.36.1 && sleep infinity"
+    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.36.1 && apk add --no-cache dnsmasq && echo '120.0.37.2 www.siteglobal.com' >> /etc/hosts && dnsmasq -k --log-queries --log-facility=- --user=root --interface=eth0 --bind-interfaces"
     networks:
       net_36:
         ipv4_address: 120.0.36.2
@@ -239,7 +241,7 @@ services:
   Client_Ent1:
     image: alpine
     container_name: Client_Ent1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && sleep infinity"
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
     networks:
       net_ent:
         ipv4_address: 10.10.10.3
