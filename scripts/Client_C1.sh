@@ -2,8 +2,6 @@
 echo "Configuring Client_C1..."
 
 # interface eth0 -> net_c1
-docker exec --privileged Client_C1 ip addr flush dev eth0
-docker exec --privileged Client_C1 ip addr add 192.168.2.2/24 dev eth0
 docker exec --privileged Client_C1 ip link set up dev eth0
 
 # Default Gateway -> Box_C1 (192.168.2.1)
