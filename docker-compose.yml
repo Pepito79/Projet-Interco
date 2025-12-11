@@ -74,10 +74,11 @@ services:
 
   # --- BRANCHE BOX C1 ---
   box_c1:
-    image: frrouting/frr:latest
+    image: image-vpn:v1
     container_name: Box_C1
     cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
+      - ./AS1/Client/Client_C1/init.sh:/init.sh
       - ./AS1/Box/Box_C1/init.sh:/usr/local/bin/init.sh
       - ./AS1/Box/Box_C1/frr.conf:/etc/frr/frr.conf
       - ./AS1/Box/Box_C1/daemons:/etc/frr/daemons
@@ -113,7 +114,7 @@ services:
   # ... (Dans la section AS 1 / BRANCHE ENTREPRISE 1)
 
   serveur_entreprise_1:
-    image: alpine:latest
+    image: image-vpn:v1
     container_name: Serveur_Entreprise_1
     cap_add: [NET_ADMIN]
     # On remplace "command: sleep infinity" par le volume et l'entrypoint
