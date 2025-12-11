@@ -221,7 +221,10 @@ services:
   DNS_1:
     image: alpine
     container_name: DNS_1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.36.1 && apk add --no-cache dnsmasq && echo '120.0.37.2 www.siteglobal.com' >> /etc/hosts && dnsmasq -k --log-queries --log-facility=- --user=root --interface=eth0 --bind-interfaces"
+    volumes:
+      - ./config/DNS_1/dnsmasq.conf:/etc/dnsmasq.conf
+      - ./config/DNS_1/hosts:/etc/dnsmasq.hosts
+    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.36.1 && apk add --no-cache dnsmasq && dnsmasq -k -C /etc/dnsmasq.conf"
     networks:
       net_36:
         ipv4_address: 120.0.36.2
