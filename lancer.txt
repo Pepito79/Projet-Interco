@@ -1,0 +1,5 @@
+docker-compose up -d
+
+./configure_network.sh
+
+docker exec Client_B1 ping 192.168.2.2

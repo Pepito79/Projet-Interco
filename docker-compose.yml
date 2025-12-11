@@ -1,225 +1,223 @@
-version: '3'
+version: '3.8'
 
-#On réserve les .254 pour les gateway
-#ATTENTION LES LIENS DOCKERS SE FONT PAR ORDRE ALPAHBETIQUE
-#dans l'ordre:
-#link_fai1_boxb1
-#link_fai1_boxc1
-#link_fai1_r11
-#link_fai1_r12
-#link_fai1_rent1
-#link_r11_r12
-#net_b1_lan
-#net_c1_lan
-#net_dns1
-#net_ent1_lan
-#net_web1
+networks:
+  net_32:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.32.0/24
+          gateway: 120.0.32.254
+  net_33:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.33.0/24
+          gateway: 120.0.33.254
+  net_34:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.34.0/24
+          gateway: 120.0.34.254
+  net_35:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.35.0/24
+          gateway: 120.0.35.254
+  net_39:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.39.0/24
+          gateway: 120.0.39.254
+  net_38:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.38.0/24
+          gateway: 120.0.38.254
+  net_37:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.37.0/24
+          gateway: 120.0.37.254
+  net_36:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.36.0/24
+          gateway: 120.0.36.254
+  net_b1:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.101.0/24
+          gateway: 192.168.101.254
+  net_c1:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.2.0/24
+          gateway: 192.168.2.254
+  net_ent:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+          gateway: 10.10.10.254
 
 services:
-  # ==============================================================================
-  # AS 1 : OSPF AREA (120.0.32.0/20)
-  # ==============================================================================
-
-  # --- CŒUR DE RÉSEAU AS1 ---
-  r_fai_1:
-    image: frrouting/frr:latest
+  # R_FAI_1 (Central Router)
+  R_FAI_1:
+    image: frrouting/frr
     container_name: R_FAI_1
     privileged: true
-    hostname : R_FAI_1
-    cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
-      - ./AS1/Router/R_FAI_1/init.sh:/usr/local/bin/init.sh
-      - ./AS1/Router/R_FAI_1/frr.conf:/etc/frr/frr.conf
-      - ./AS1/Router/R_FAI_1/daemons:/etc/frr/daemons
-    entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
+      - ./config/R_FAI_1:/etc/frr
     networks:
-      - link_fai1_boxb1    #eth0 (120.0.32.0/24)
-      - link_fai1_boxc1    #eth1  (120.0.33.0/24)
-      - link_fai1_r11      #eth2 (120.0.35.0/24)
-      - link_fai1_r12       #eth3 (120.0.39.0/24)
-      - link_fai1_rent1     #eth4 (120.0.34.0/24)
+      net_32:
+      net_33:
+      net_34:
+      net_35:
+      net_39:
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
 
-  # --- BRANCHE BOX B1 ---
-  box_b1:
-    image: frrouting/frr:latest
+  # Box_B1
+  Box_B1:
+    image: frrouting/frr
     container_name: Box_B1
     privileged: true
-    cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
-      - ./AS1/Box/Box_B1/init.sh:/usr/local/bin/init.sh
-      - ./AS1/Box/Box_B1/frr.conf:/etc/frr/frr.conf
-      - ./AS1/Box/Box_B1/daemons:/etc/frr/daemons
-    entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
+      - ./config/Box_B1:/etc/frr
     networks:
-      - link_fai1_boxb1    # eth0 (120.0.32.0/24)
-      - net_b1_lan         # eth1 (192.168.1.0/24)
+      net_32:
+      net_b1:
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
 
-  client_b1:
-    image: alpine:latest
-    container_name: Client_B1
-    cap_add: [NET_ADMIN]
-    volumes:
-      - ./AS1/Client/Client_B1/init.sh:/init.sh
-    entrypoint: ["/bin/sh", "/init.sh"]
-    networks:
-      - net_b1_lan    # eth0 (192.168.1.0/24)
-
-  serveur_b1:
-    image: alpine:latest
-    container_name: Serveur_B1
-    cap_add: [NET_ADMIN]
-    # IMPORTANT : On monte le script depuis le nouveau dossier
-    volumes:
-      - ./AS1/Serveur/Serveur_B1/init.sh:/init.sh
-    # On exécute le script au démarrage
-    entrypoint: ["/bin/sh", "/init.sh"]
-    networks:
-      - net_b1_lan    # eth0 (192.168.1.0/24)
-
-  # --- BRANCHE BOX C1 ---
-  box_c1:
-    image: frrouting/frr:latest
+  # Box_C1
+  Box_C1:
+    image: frrouting/frr
     container_name: Box_C1
     privileged: true
-    cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
-      - ./AS1/Box/Box_C1/init.sh:/usr/local/bin/init.sh
-      - ./AS1/Box/Box_C1/frr.conf:/etc/frr/frr.conf
-      - ./AS1/Box/Box_C1/daemons:/etc/frr/daemons
-    entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
+      - ./config/Box_C1:/etc/frr
     networks:
-      - link_fai1_boxc1    # eth0 (120.0.33.0/24)
-      - net_c1_lan         # eth1 (192.168.2.0/24)
-      
-  client_c1:
-    image: alpine:latest
-    container_name: Client_C1
-    cap_add: [NET_ADMIN]
-    volumes:
-      - ./AS1/Client/Client_C1/init.sh:/init.sh
-    entrypoint: ["/bin/sh", "/init.sh"]
-    networks:
-      - net_c1_lan    #eth0
+      net_33:
+      net_c1:
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
 
-  # --- BRANCHE ENTREPRISE 1 ---
-  r_entreprise1:
-    image: frrouting/frr:latest
+  # R_Entreprise1
+  R_Entreprise1:
+    image: frrouting/frr
     container_name: R_Entreprise1
     privileged: true
-    cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
-      - ./AS1/Router/R_Entreprise1/init.sh:/usr/local/bin/init.sh
-      - ./AS1/Router/R_Entreprise1/frr.conf:/etc/frr/frr.conf
-      - ./AS1/Router/R_Entreprise1/daemons:/etc/frr/daemons
-    entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
+      - ./config/R_Entreprise1:/etc/frr
     networks:
-      - link_fai1_rent1    # eth0 (120.0.34.0/24)
-      - net_ent1_lan       # eth1 (10.10.10.0/24)
+      net_34:
+      net_ent:
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
 
-  # ... (Dans la section AS 1 / BRANCHE ENTREPRISE 1)
-
-  serveur_entreprise_1:
-    image: alpine:latest
-    container_name: Serveur_Entreprise_1
-    cap_add: [NET_ADMIN]
-    # On remplace "command: sleep infinity" par le volume et l'entrypoint
-    volumes:
-      - ./AS1/Serveur/Serveur_Entreprise_1/init.sh:/init.sh
-    entrypoint: ["/bin/sh", "/init.sh"]
-    networks:
-      - net_ent1_lan  #eth0 (10.10.10.0/24)
-
-  client_entreprise_1:
-    image: alpine:latest
-    container_name: Client_Ent1
-    cap_add: [NET_ADMIN]
-    volumes:
-      - ./AS1/Client/Client_Ent1/init.sh:/init.sh
-    entrypoint: ["/bin/sh", "/init.sh"]
-    networks:
-      - net_ent1_lan  #eth0 (10.10.10.0/24)
-
-  # --- BRANCHE SERVICES (WEB/DNS) ---
-  r11:
-    image: frrouting/frr:latest
+  # R11
+  R11:
+    image: frrouting/frr
     container_name: R11
     privileged: true
-    cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
-      - ./AS1/Router/R11/init.sh:/usr/local/bin/init.sh
-      - ./AS1/Router/R11/frr.conf:/etc/frr/frr.conf
-      - ./AS1/Router/R11/daemons:/etc/frr/daemons
-    entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
+      - ./config/R11:/etc/frr
     networks:
-      - link_fai1_r11      # eth0 (120.0.35.0/24)
-      - link_r11_r12       # eth1 (120.0.38.0/24)
-      - net_web1           # eth2 (120.0.37.0/24)
-      
+      net_35:
+      net_38:
+      net_37:
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
 
-  r12:
-    image: frrouting/frr:latest
+  # R12
+  R12:
+    image: frrouting/frr
     container_name: R12
     privileged: true
-    cap_add: [NET_ADMIN, SYS_ADMIN]
     volumes:
-      - ./AS1/Router/R12/init.sh:/usr/local/bin/init.sh
-      - ./AS1/Router/R12/frr.conf:/etc/frr/frr.conf
-      - ./AS1/Router/R12/daemons:/etc/frr/daemons
-    entrypoint: ["/bin/sh", "/usr/local/bin/init.sh"]
+      - ./config/R12:/etc/frr
     networks:
-      - link_fai1_r12      # eth0 (120.0.39.0/24)
-      - link_r11_r12       # eth1 (120.0.38.0/24)
-      - net_dns1           # eth2 (120.0.36.0/24)
+      net_39:
+      net_38:
+      net_36:
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
 
-  serveur_web1:
-    image: alpine:latest
+  # End Devices (Simulating Hosts)
+  Client_B1:
+    image: alpine
+    container_name: Client_B1
+    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.101.1 && sleep infinity"
+    networks:
+      net_b1:
+    cap_add:
+      - NET_ADMIN
+
+  Serveur_B1:
+    image: alpine
+    container_name: Serveur_B1
+    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.101.1 && sleep infinity"
+    networks:
+      net_b1:
+    cap_add:
+      - NET_ADMIN
+
+  Client_C1:
+    image: alpine
+    container_name: Client_C1
+    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.2.1 && sleep infinity"
+    networks:
+      net_c1:
+    cap_add:
+      - NET_ADMIN
+
+  Serveur_Web1:
+    image: alpine
     container_name: Serveur_Web1
-    cap_add: [NET_ADMIN]
-    # MODIFICATION ICI :
-    volumes:
-      - ./AS1/Serveur/Serveur_Web1/init.sh:/init.sh
-    entrypoint: ["/bin/sh", "/init.sh"]
+    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.37.1 && sleep infinity"
     networks:
-      - net_web1  #eth0 (120.0.37.0/24)
+      net_37:
+    cap_add:
+      - NET_ADMIN
 
-  dns_1:
-    image: alpine:latest
+  DNS_1:
+    image: alpine
     container_name: DNS_1
-    cap_add: [NET_ADMIN]
-    # MODIFICATION ICI :
-    volumes:
-      - ./AS1/Services/DNS_1/init.sh:/init.sh
-    entrypoint: ["/bin/sh", "/init.sh"]
+    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.36.2 && sleep infinity"
     networks:
-      - net_dns1  #eth0 (120.0.36.0/24)
+      net_36:
+    cap_add:
+      - NET_ADMIN
 
+  Serveur_Entreprise_1:
+    image: alpine
+    container_name: Serveur_Entreprise_1
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && sleep infinity"
+    networks:
+      net_ent:
+    cap_add:
+      - NET_ADMIN
 
-# ==============================================================================
-# DÉFINITION DES RÉSEAUX (LES CÂBLES)
-# ==============================================================================
-networks:
-  # --- AS 1 ---
-  net_b1_lan:
-    ipam: { config: [ { subnet: 192.168.101.0/24, gateway:  192.168.101.254 } ] } #on met adresse IP au pif mais qui n'interfère pas avec les adresses IP qu'on attribue
-  net_c1_lan:
-    ipam: { config: [ { subnet: 192.168.2.0/24, gateway: 192.168.2.254 } ] }
-  net_ent1_lan:
-    ipam: { config: [ { subnet: 10.10.10.0/24, gateway: 10.10.10.254 } ] }
-  
-  link_fai1_boxb1:
-    ipam: { config: [ { subnet: 120.0.32.0/24, gateway: 120.0.32.254 } ] }
-  link_fai1_boxc1:
-    ipam: { config: [ { subnet: 120.0.33.0/24, gateway: 120.0.33.254 } ] }
-  link_fai1_rent1:
-    ipam: { config: [ { subnet: 120.0.34.0/24, gateway: 120.0.34.254 } ] }
-  link_fai1_r11:
-    ipam: { config: [ { subnet: 120.0.35.0/24, gateway: 120.0.35.254 } ] }
-  link_fai1_r12:
-    ipam: { config: [ { subnet: 120.0.39.0/24, gateway: 120.0.39.254 } ] }
-
-  net_web1:
-    ipam: { config: [ { subnet: 120.0.37.0/24, gateway: 120.0.37.254 } ] }
-  net_dns1:
-    ipam: { config: [ { subnet: 120.0.36.0/24, gateway: 120.0.36.254 } ] }
-  link_r11_r12:
-    ipam: { config: [ { subnet: 120.0.38.0/24, gateway: 120.0.38.254 } ] }
+  Client_Ent1:
+    image: alpine
+    container_name: Client_Ent1
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && sleep infinity"
+    networks:
+      net_ent:
+    cap_add:
+      - NET_ADMIN
