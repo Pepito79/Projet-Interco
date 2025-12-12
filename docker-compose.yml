@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'
 
 networks:
   net_32:
@@ -61,12 +61,34 @@ networks:
       config:
         - subnet: 192.168.2.0/24
           gateway: 192.168.2.254
-  net_ent:
+
+  net_ent_lan:
+    # Lien point-à-point R_Entreprise1 <-> R_LAN
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.1.0/30
+
+  net_ent_dmz:
+    # Lien point-à-point R_Entreprise1 <-> R_DMZ
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.2.0/30
+
+  net_lan:
+    # LAN des travailleurs
     driver: bridge
     ipam:
       config:
         - subnet: 10.10.10.0/24
-          gateway: 10.10.10.254
+
+  net_dmz:
+    # LAN de la DMZ
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.20.0/24
 
 services:
   # R_FAI_1 (Central Router)
@@ -133,8 +155,40 @@ services:
     networks:
       net_34:
         ipv4_address: 120.0.34.2
-      net_ent:
-        ipv4_address: 10.10.10.1
+      net_ent_lan:
+        ipv4_address: 10.10.1.1
+      net_ent_dmz:
+        ipv4_address: 10.10.2.1
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  R_Entreprise_LAN:
+    image: frrouting/frr
+    container_name: R_Entreprise_LAN
+    privileged: true
+    volumes:
+      - ./config/R_Entreprise_LAN:/etc/frr
+    networks:
+      net_ent_lan:
+        ipv4_address: 10.10.1.2
+      net_lan:
+        ipv4_address: 10.10.10.2
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  R_Entreprise_DMZ:
+    image: frrouting/frr
+    container_name: R_Entreprise_DMZ
+    privileged: true
+    volumes:
+      - ./config/R_Entreprise_DMZ:/etc/frr
+    networks:
+      net_ent_dmz:
+        ipv4_address: 10.10.2.2
+      net_dmz:
+        ipv4_address: 10.10.20.1
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -231,22 +285,47 @@ services:
     cap_add:
       - NET_ADMIN
 
-  Serveur_Entreprise_1:
-    image: alpine
-    container_name: Serveur_Entreprise_1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && sleep infinity"
-    networks:
-      net_ent:
-        ipv4_address: 10.10.10.2
-    cap_add:
-      - NET_ADMIN
-
   Client_Ent1:
     image: alpine
     container_name: Client_Ent1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.2 && echo 'nameserver 10.10.20.2' > /etc/resolv.conf && sleep infinity"
     networks:
-      net_ent:
+      net_lan:
         ipv4_address: 10.10.10.3
+    cap_add:
+      - NET_ADMIN
+
+  Client_Ent2:
+    image: alpine
+    container_name: Client_Ent2
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.2 && echo 'nameserver 10.10.20.2' > /etc/resolv.conf && sleep infinity"
+    networks:
+      net_lan:
+        ipv4_address: 10.10.10.4
+    cap_add:
+      - NET_ADMIN
+
+  Serveur_Web_Entreprise:
+    image: alpine
+    container_name: Serveur_Web_Entreprise
+    volumes:
+      - ./config/web_entreprise:/var/www/html
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.20.1 && apk add --no-cache python3 && cd /var/www/html && python3 -m http.server 80"
+    networks:
+      net_dmz:
+        ipv4_address: 10.10.20.3
+    cap_add:
+      - NET_ADMIN
+
+  DNS_Entreprise:
+    image: alpine
+    container_name: DNS_Entreprise
+    volumes:
+      - ./config/DNS_Entreprise/dnsmasq.conf:/etc/dnsmasq.conf
+      - ./config/DNS_Entreprise/hosts:/etc/dnsmasq.hosts
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.20.1 && apk add --no-cache dnsmasq && dnsmasq -k -C /etc/dnsmasq.conf"
+    networks:
+      net_dmz:
+        ipv4_address: 10.10.20.2
     cap_add:
       - NET_ADMIN
