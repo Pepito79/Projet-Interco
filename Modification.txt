@@ -1,0 +1,1 @@
+les ip des box_B1 et box_C1 ont changé on a maintenant 192.168.101.5 et 192.168.2.5 cela entraine des changements dans client_C1 cleint_B1 et Serveur_B1 au niveau des routes par défauts aussi au niveau du docker compose ( box_b1 box_c1) dhcp_b1 et dhcp_c1 au niveau de la partie routeur
