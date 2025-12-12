@@ -8,6 +8,4 @@ docker exec --privileged DNS_1 ip link set up dev eth0
 docker exec --privileged DNS_1 ip route del default || true
 docker exec --privileged DNS_1 ip route add default via 120.0.36.1
 
-# Lancer dnsmasq
-docker exec --privileged DNS_1 apk add --no-cache dnsmasq
-docker exec --privileged DNS_1 dnsmasq -k -C /etc/dnsmasq.conf
+
