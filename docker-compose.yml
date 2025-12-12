@@ -69,6 +69,7 @@ networks:
           gateway: 10.10.10.254
 
 services:
+  
   # R_FAI_1 (Central Router)
   R_FAI_1:
     image: frrouting/frr
@@ -90,6 +91,87 @@ services:
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
+  DHCP_B1:
+    image: debian:12
+    container_name: DHCP_B1
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    networks:
+      net_b1:
+        ipv4_address: 192.168.101.10
+    command: |
+      bash -lc '
+        set -e
+
+        apt-get update
+        apt-get install -y isc-dhcp-server iproute2
+
+        # S’assurer que la base de baux existe (sinon dhcpd quitte)
+        mkdir -p /var/lib/dhcp
+        touch /var/lib/dhcp/dhcpd.leases
+        touch /var/lib/dhcp/dhcpd.leases~
+
+        printf "INTERFACESv4=\"eth0\"\nINTERFACESv6=\"\"\n" > /etc/default/isc-dhcp-server
+
+        cat > /etc/dhcp/dhcpd.conf <<'"'"'EOF'"'"'
+      authoritative;
+      default-lease-time 600;
+      max-lease-time 7200;
+
+      option domain-name-servers 120.0.36.2;
+
+      subnet 192.168.101.0 netmask 255.255.255.0 {
+      range 192.168.101.50 192.168.101.200;
+      option routers 192.168.101.1;
+      option broadcast-address 192.168.101.255;
+      }
+      EOF
+
+        exec dhcpd -4 -f -d -lf /var/lib/dhcp/dhcpd.leases -cf /etc/dhcp/dhcpd.conf eth0
+      '
+  DHCP_C1:
+    image: debian:12
+    container_name: DHCP_C1
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    networks:
+      net_c1:
+        ipv4_address: 192.168.2.10
+    command: |
+      bash -lc '
+        set -e
+
+        apt-get update
+        apt-get install -y isc-dhcp-server iproute2
+
+        # S’assurer que la base de baux existe (sinon dhcpd quitte)
+        mkdir -p /var/lib/dhcp
+        touch /var/lib/dhcp/dhcpd.leases
+        touch /var/lib/dhcp/dhcpd.leases~
+
+        printf "INTERFACESv4=\"eth0\"\nINTERFACESv6=\"\"\n" > /etc/default/isc-dhcp-server
+
+        cat > /etc/dhcp/dhcpd.conf <<'"'"'EOF'"'"'
+      authoritative;
+      default-lease-time 600;
+      max-lease-time 7200;
+
+      option domain-name-servers 120.0.36.2;
+
+      subnet 192.168.2.0 netmask 255.255.255.0 {
+      range 192.168.2.50 192.168.2.200;
+      option routers 192.168.2.1;
+      option broadcast-address 192.168.2.255;
+      }
+      EOF
+
+        exec dhcpd -4 -f -d -lf /var/lib/dhcp/dhcpd.leases -cf /etc/dhcp/dhcpd.conf eth0
+      '
+
+
+      
 
   # Box_B1
   Box_B1:
@@ -102,7 +184,7 @@ services:
       net_32:
         ipv4_address: 120.0.32.2
       net_b1:
-        ipv4_address: 192.168.101.1
+        ipv4_address: 192.168.101.5
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -118,7 +200,7 @@ services:
       net_33:
         ipv4_address: 120.0.33.2
       net_c1:
-        ipv4_address: 192.168.2.1
+        ipv4_address: 192.168.2.3
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -179,32 +261,42 @@ services:
   Client_B1:
     image: alpine
     container_name: Client_B1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.101.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    command: /bin/sh -c "
+      ip route del default || true;
+      udhcpc -i eth0 -q -f;
+      sleep infinity "
+    
     networks:
-      net_b1:
-        ipv4_address: 192.168.101.2
+      net_b1: {}
     cap_add:
       - NET_ADMIN
 
   Serveur_B1:
     image: alpine
     container_name: Serveur_B1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.101.1 && sleep infinity"
+    command: /bin/sh -c "
+      ip route del default || true;
+      udhcpc -i eth0 -q -f;
+      sleep infinity"
+    
     networks:
-      net_b1:
-        ipv4_address: 192.168.101.3
+      net_b1: {}
     cap_add:
       - NET_ADMIN
 
   Client_C1:
     image: alpine
     container_name: Client_C1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.2.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    command: /bin/sh -c "
+      ip route del default || true;
+      udhcpc -i eth0 -q -f;
+      sleep infinity "
+    
     networks:
-      net_c1:
-        ipv4_address: 192.168.2.2
+      net_b1: {}
     cap_add:
       - NET_ADMIN
+ 
 
   Serveur_Web1:
     image: alpine
