@@ -7,8 +7,5 @@ docker-compose down
 
 
 docker-compose up -d
-
 chmod +x configure_network.sh
 ./configure_network.sh
-
-docker exec Client_B1 ping -c 2 192.168.2.2
