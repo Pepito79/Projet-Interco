@@ -123,7 +123,7 @@ services:
 
       subnet 192.168.101.0 netmask 255.255.255.0 {
       range 192.168.101.50 192.168.101.200;
-      option routers 192.168.101.1;
+      option routers 192.168.101.5;
       option broadcast-address 192.168.101.255;
       }
       EOF
@@ -162,7 +162,7 @@ services:
 
       subnet 192.168.2.0 netmask 255.255.255.0 {
       range 192.168.2.50 192.168.2.200;
-      option routers 192.168.2.1;
+      option routers 192.168.2.5;
       option broadcast-address 192.168.2.255;
       }
       EOF
@@ -200,7 +200,7 @@ services:
       net_33:
         ipv4_address: 120.0.33.2
       net_c1:
-        ipv4_address: 192.168.2.3
+        ipv4_address: 192.168.2.5
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -293,7 +293,7 @@ services:
       sleep infinity "
     
     networks:
-      net_b1: {}
+      net_c1: {}
     cap_add:
       - NET_ADMIN
  
@@ -342,3 +342,4 @@ services:
         ipv4_address: 10.10.10.3
     cap_add:
       - NET_ADMIN
+
