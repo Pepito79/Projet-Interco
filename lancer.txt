@@ -5,7 +5,7 @@ docker system prune -a --volumes
 
 docker-compose down
 
-
+Le minimum pour lancer
 docker-compose up -d
 chmod +x configure_network.sh
 ./configure_network.sh
