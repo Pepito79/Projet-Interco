@@ -84,7 +84,7 @@ networks:
     ipam:
       config:
         - subnet: 10.10.10.0/24
-          gateway: 10.10.10.254
+          gateway: 10.10.10.1
 
   net_dmz:
     # LAN de la DMZ
@@ -176,8 +176,7 @@ services:
     networks:
       net_ent_lan:
         ipv4_address: 10.10.1.2
-      net_lan:
-        ipv4_address: 10.10.10.1
+      net_lan: {}
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -253,6 +252,17 @@ services:
         ipv4_address: 192.168.101.3
     cap_add:
       - NET_ADMIN
+  DHCP_Ent_LAN:
+    image: alpine
+    container_name: DHCP_Ent_LAN
+    command: /bin/sh -c "apk add --no-cache dnsmasq && dnsmasq -k -C /etc/dnsmasq.conf"
+    networks:
+      net_lan:
+        ipv4_address: 10.10.10.250
+    volumes:
+      - ./config/DHCP_Ent_LAN/dnsmasq.conf:/etc/dnsmasq.conf
+    cap_add:
+      - NET_ADMIN
 
   Client_C1:
     image: alpine
@@ -292,15 +302,20 @@ services:
   Client_Ent1:
     image: alpine
     container_name: Client_Ent1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && echo 'nameserver 10.10.20.3' > /etc/resolv.conf && sleep infinity"
+    command: /bin/sh -c "sleep infinity"
     networks:
-      net_lan:
-        ipv4_address: 10.10.10.2
+      - net_lan
     cap_add:
       - NET_ADMIN
 
-
-
+  Client_Ent2:
+    image: alpine
+    container_name: Client_Ent2
+    command: /bin/sh -c "sleep infinity"
+    networks:
+      - net_lan
+    cap_add:
+      - NET_ADMIN
   Serveur_Entreprise_1:
     image: alpine
     container_name: Serveur_Entreprise_1

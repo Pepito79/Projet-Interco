@@ -1,12 +1,16 @@
 #!/bin/bash
-echo "Configuring Client_Ent1..."
+echo "Configuring Client_Ent1 with DHCP..."
 
-# interface eth0 -> net_lan
+# Activer l'interface eth0
 docker exec --privileged Client_Ent1 ip link set up dev eth0
+sleep 1
 
-# Default Gateway -> R_LAN (10.10.10.254)
-docker exec --privileged Client_Ent1 ip route del default || true
-docker exec --privileged Client_Ent1 ip route add default via 10.10.10.1
+# Installer le client DHCP si ce n'est pas déjà fait
+docker exec --privileged Client_Ent1 apk add --no-cache dhcpcd
 
-# Définir le serveur DNS interne
-docker exec --privileged Client_Ent1 sh -c "echo 'nameserver 10.10.20.3' > /etc/resolv.conf"
+# Demander une IP automatiquement via DHCP
+docker exec --privileged Client_Ent1 dhcpcd -n eth0
+
+# Vérifier l'adresse IP attribuée
+docker exec --privileged Client_Ent1 ip addr show eth0
+    
