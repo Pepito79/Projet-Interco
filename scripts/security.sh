@@ -1,46 +1,41 @@
 #!/bin/bash
 
-# 1. Vider (flush) les règles existantes
+# 1. Nettoyage
 docker exec R_Entreprise1 iptables -F
 docker exec R_Entreprise1 iptables -t nat -F
-docker exec R_Entreprise1 iptables -t mangle -F
 
-# 2. Définir des politiques par défaut restrictives
-# On bloque tout ce qui entre et ce qui transite
+# 2. Politiques restrictives (Tout est bloqué par défaut)
 docker exec R_Entreprise1 iptables -P INPUT DROP
 docker exec R_Entreprise1 iptables -P FORWARD DROP
 docker exec R_Entreprise1 iptables -P OUTPUT ACCEPT
 
-# 3. Autoriser les connexions établies et relatives (Stateful inspection)
-# Permet au trafic de retour de passer
+# -------------------------------------------------------------------------
+# 3. SÉCURITÉ : On bloque l'entrée vers le LAN AVANT toute autorisation
+# -------------------------------------------------------------------------
+# On utilise -I (Insert) pour que ce soit la TOUTE PREMIÈRE règle lue.
+# Elle dit : "Si ça vient de l'extérieur (eth0) vers le LAN, on jette direct"
+docker exec R_Entreprise1 iptables -I FORWARD -i eth0 -d 10.10.10.0/24 -j DROP
+
+# 4. Autoriser le trafic de retour (Stateful)
 docker exec R_Entreprise1 iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 docker exec R_Entreprise1 iptables -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
-# 4. Autoriser la boucle locale (localhost)
+# 5. Autoriser les protocoles de structure (OSPF, ICMP, Loopback)
 docker exec R_Entreprise1 iptables -A INPUT -i lo -j ACCEPT
-
-# 5. Autoriser les paquets OSPF (Indispensable pour tes routeurs FRR)
 docker exec R_Entreprise1 iptables -A INPUT -p ospf -j ACCEPT
 docker exec R_Entreprise1 iptables -A FORWARD -p ospf -j ACCEPT
-
-# 6. Autoriser le ping (ICMP) vers le routeur
 docker exec R_Entreprise1 iptables -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
 
-# Autoriser le LAN de l'entreprise (net_lan) à sortir vers Internet
-# Plage : 10.10.10.0/24
+# 6. Autoriser le LAN à sortir (Pour que les employés aient Internet)
 docker exec R_Entreprise1 iptables -A FORWARD -s 10.10.10.0/24 -j ACCEPT
 
-# Autoriser l'accès au SERVEUR WEB de la DMZ (port 80) depuis n'importe où
+# 7. Autoriser le Serveur WEB (DMZ)
 docker exec R_Entreprise1 iptables -A FORWARD -d 10.10.20.2 -p tcp --dport 80 -j ACCEPT
 
-# Autoriser l'accès au DNS de la DMZ (port 53) pour le LAN
-docker exec R_Entreprise1 iptables -A FORWARD -s 10.10.10.0/24 -d 10.10.20.3 -p udp --dport 53 -j ACCEPT
-docker exec R_Entreprise1 iptables -A FORWARD -s 10.10.10.0/24 -d 10.10.20.3 -p tcp --dport 53 -j ACCEPT
-
-# 8. NAT (Masquerade) pour que le LAN puisse naviguer sur le réseau FAI
+# 8. NAT : Redirection de port (DNAT) et Masquerade
+# On redirige l'IP publique vers le serveur Web interne
+docker exec R_Entreprise1 iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j DNAT --to-destination 10.10.20.2:80
+# On permet au LAN de sortir avec l'IP publique
 docker exec R_Entreprise1 iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 
-#9 . DNAT si qql tape l'add du routeur entreprise on le redirige vers le serveur web
-docker exec R_Entreprise1 iptables -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination 10.10.20.2:80
-
-echo "✅ Le pare-feu de R_Entreprise1 a été configuré et sécurisé."
+echo "✅ Pare-feu sécurisé : Le service RH est désormais isolé de l'extérieur."

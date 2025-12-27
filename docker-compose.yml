@@ -340,3 +340,26 @@ services:
         ipv4_address: 10.10.20.3
     cap_add:
       - NET_ADMIN
+
+  Serveur_Interne_RH:
+    image: alpine
+    container_name: Serveur_Interne_RH
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && apk add --no-cache python3 && echo 'ACCÈS RÉSERVÉ RH' > index.html && python3 -m http.server 80"
+    networks:
+      net_lan:
+        ipv4_address: 10.10.10.5
+    cap_add:
+      - NET_ADMIN
+  Serveur_FTP_Public:
+    image: delfer/alpine-ftp-server
+    container_name: Serveur_FTP_Public
+    environment:
+      - FTP_USER=public
+      - FTP_PASS=password123
+      - MIN_PORT=21000
+      - MAX_PORT=21010
+    networks:
+      net_37:
+        ipv4_address: 120.0.37.5
+    cap_add:
+      - NET_ADMIN
