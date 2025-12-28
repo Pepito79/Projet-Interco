@@ -279,7 +279,7 @@ services:
     container_name: Serveur_Web1
     volumes:
       - ./config/web:/var/www/html
-    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.37.1 && apk add --no-cache python3 && cd /var/www/html && python3 -m http.server 80"
+    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.37.1 && apk add --no-cache python3 py3-pip openssh-client && pip install flask --break-system-packages && python3 /var/www/html/app.py"
     networks:
       net_37:
         ipv4_address: 120.0.37.2
