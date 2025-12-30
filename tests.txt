@@ -12,5 +12,16 @@ docker exec Client_B1 ping -c 4 120.0.32.1
 Client B1 vers Client C1
 docker exec Client_B1 ping -c 4 192.168.2.2
 
+Client B1 vers R11
+docker exec Client_B1 ping -c 4 120.0.35.2
+
+Client_Ent1 vers R_Ent_DMZ
+docker exec Client_Ent1 ping -c 4 10.10.2.2
+
+Client_Ent1 vers R11:
+docker exec Client_Ent1 ping -c 4 120.0.35.2
+
+
 test DNS et site web
 docker exec Client_B1 nslookup www.siteglobal.com
+docker exec Client_B1 wget -qO- http://www.siteglobal.com

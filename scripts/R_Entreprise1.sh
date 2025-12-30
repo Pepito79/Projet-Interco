@@ -17,3 +17,9 @@ docker exec --privileged R_Entreprise1 iptables -t nat -A PREROUTING -d 120.0.34
 docker exec --privileged R_Entreprise1 iptables -t nat -A POSTROUTING -d 10.10.10.3 -p tcp --dport 9999 -j MASQUERADE
 
 echo "✅ TOUT EST PRÊT : Route + NAT + Masquerade appliqués."
+
+# Activer les interfaces réseau
+#docker exec --privileged R_Entreprise1 ip link set up dev eth0  # net_34 (vers FAI)
+#docker exec --privileged R_Entreprise1 ip link set up dev eth1  # net_ent_lan (vers LAN employés)
+#docker exec --privileged R_Entreprise1 ip link set up dev eth2  # net_ent_dmz (vers DMZ)
+
