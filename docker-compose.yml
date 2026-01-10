@@ -331,7 +331,7 @@ services:
   Client_Ent2:
     image: alpine
     container_name: Client_Ent2
-    command: /bin/sh -c "sleep infinity"
+    command: /bin/sh -c "ip addr flush dev eth0 && udhcpc -i eth0 -b && sleep infinity"
     networks:
       - net_lan
     cap_add:
