@@ -1,7 +1,15 @@
 #!/bin/bash
-echo "Configuring R_Entreprise1..."
+echo "Configuration de R_Entreprise1..."
 
-# Activer les interfaces réseau
-docker exec --privileged R_Entreprise1 ip link set up dev eth0  # net_34 (vers FAI)
-docker exec --privileged R_Entreprise1 ip link set up dev eth1  # net_ent_lan (vers LAN employés)
-docker exec --privileged R_Entreprise1 ip link set up dev eth2  # net_ent_dmz (vers DMZ)
+# 1. On active le forwarding (essentiel pour un routeur)
+docker exec --privileged R_Entreprise1 sysctl -w net.ipv4.ip_forward=1
+
+# 2. On s'assure que les interfaces sont UP (au cas où)
+docker exec --privileged R_Entreprise1 ip link set eth0 up
+docker exec --privileged R_Entreprise1 ip link set eth1 up
+docker exec --privileged R_Entreprise1 ip link set eth2 up
+
+# 3. Optionnel : Relancer FRR pour qu'il détecte bien les interfaces UP
+docker exec R_Entreprise1 /usr/lib/frr/frrinit.sh restart
+
+echo "R_Entreprise1 est prêt."
