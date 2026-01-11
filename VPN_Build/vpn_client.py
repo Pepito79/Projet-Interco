@@ -4,6 +4,7 @@ import os
 import select
 import time
 import sys
+import getpass
 
 # Config
 SERVER_IP = os.getenv("VPN_SERVER_IP", "120.0.34.2") # IP Publique par defaut
@@ -101,32 +102,30 @@ except Exception as e:
     log(f"❌ Impossible de joindre le serveur : {e}")
     sys.exit(1)
 
-# 3. AUTHENTIFICATION INTERACTIVE
+# --- 3. AUTHENTIFICATION ---
 try:
-    print("\n" + "="*40)
-    print("🔐  AUTHENTIFICATION VPN ENTREPRISE")
-    print("="*40)
-    # On force la lecture sur stdin (utile si lancé via docker exec -it)
-   #sys.stdin = open(0) 
-    username = input("👤 Utilisateur : ").strip()
-    password = input("🔑 Mot de passe : ").strip()
+    if os.getenv("VPN_USERNAME") and os.getenv("VPN_PASSWORD"):
+        log("🔐 Authentification via variables d'environnement...")
+        username = os.getenv("VPN_USERNAME")
+        password = os.getenv("VPN_PASSWORD")
+    else:
+        log("🔐 Veuillez vous identifier :")
+        username = input("Utilisateur : ").strip()
+        password = getpass.getpass("Mot de passe : ").strip()
     
-    # Envoi au serveur
+    # Envoi en UTF-8 CLAIR (important : le serveur attend du texte avant XOR)
     creds = f"{username}:{password}"
     sock.send(creds.encode('utf-8'))
     
-    # Attente réponse
+    # Réception de la réponse (OK:IP ou FAIL)
     response = sock.recv(1024).decode('utf-8')
     
     if response.startswith("OK:"):
         _, assigned_ip = response.split(":")
-        log(f"\n✅ Authentification RÉUSSIE !")
-        log(f"🆔 Votre IP VPN attribuée est : {assigned_ip}")
+        log(f"✅ Authentification RÉUSSIE ! IP : {assigned_ip}")
     else:
-        log(f"\n❌ ECHEC : Identifiants incorrects.")
-        sock.close()
+        log(f"❌ ECHEC : {response}")
         sys.exit(1)
-
 except Exception as e:
     log(f"Erreur Auth: {e}")
     sys.exit(1)
@@ -139,8 +138,10 @@ try:
     os.system("ip link set tun0 mtu 1300")
     
     # Routage vers le LAN Entreprise (Important !)
-    # On ajoute la route vers le réseau 10.10.x.x via le serveur VPN
-    os.system("ip route add 10.10.0.0/16 via 10.0.0.1 dev tun0 2>/dev/null")
+    # Routage configurable
+    target_net = os.getenv("VPN_TARGET_NET", "10.10.0.0/16")
+    if target_net:
+        os.system(f"ip route add {target_net} via 10.0.0.1 dev tun0 2>/dev/null")
     
 except Exception as e:
     log(f"Erreur config IP: {e}")

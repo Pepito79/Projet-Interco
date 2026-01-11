@@ -286,13 +286,14 @@ services:
 
   # --- CLIENT C1 (VPN) ---
   Client_C1:
-    image: image-vpn:v1    # Ton image VPN
+    image: image-vpn:v1 # Ton image VPN
     container_name: Client_C1
-    privileged: true       # Indispensable pour /dev/net/tun
-    cap_add: [NET_ADMIN]
+    privileged: true # Indispensable pour /dev/net/tun
+    cap_add: [ NET_ADMIN ]
     volumes:
-      - ./scripts/Client_C1.sh:/init.sh  # Ton script de démarrage
-    entrypoint: ["/bin/sh", "/init.sh"]
+      - ./scripts/Client_C1.sh:/init.sh # Ton script de démarrage
+      - ./VPN_Build/vpn_client.py:/app/vpn_client.py
+    entrypoint: [ "/bin/sh", "/init.sh" ]
     networks:
       net_c1:
         ipv4_address: 192.168.2.10
@@ -321,19 +322,17 @@ services:
         ipv4_address: 120.0.36.2
     cap_add:
       - NET_ADMIN
-
-
-  # --- SERVEUR ENTREPRISE (VPN) ---
-#  Serveur_Entreprise_1:
- #   image: image-vpn:v1     # Ton image VPN
-  #  container_name: Serveur_Entreprise_1
-   # privileged: true        # Indispensable pour /dev/net/tun
-    #cap_add: [NET_ADMIN]
-    #volumes:
-     # - ./scripts/Serveur_Entreprise_1.sh:/init.sh  # Ton script de démarrage
-    #entrypoint: ["/bin/sh", "/init.sh"]
-    #networks:
-     # net_ent:
+      # --- SERVEUR ENTREPRISE (VPN) ---
+      #  Serveur_Entreprise_1:
+      #   image: image-vpn:v1     # Ton image VPN
+      #  container_name: Serveur_Entreprise_1
+      # privileged: true        # Indispensable pour /dev/net/tun
+      #cap_add: [NET_ADMIN]
+      #volumes:
+      # - ./scripts/Serveur_Entreprise_1.sh:/init.sh  # Ton script de démarrage
+      #entrypoint: ["/bin/sh", "/init.sh"]
+      #networks:
+      # net_ent:
       #  ipv4_address: 10.10.10.3
 
   Client_Ent1:
@@ -453,3 +452,33 @@ services:
 
       - NET_ADMIN
 
+  Serveur_VPN_Ent2:
+    image: image-vpn:v1
+    container_name: Serveur_VPN_Ent2
+    privileged: true
+    volumes:
+      - ./VPN_Build/vpn_server.py:/var/www/html/vpn_server.py
+    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.44.254 && ip route add 10.20.10.0/24 via 120.0.44.2 && apt-get update && apt-get install -y python3 iptables && iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE && python3 /var/www/html/vpn_server.py"
+    networks:
+      net_44:
+        ipv4_address: 120.0.44.5
+    cap_add:
+      - NET_ADMIN
+
+  VPN_Bridge_Ent1:
+    image: image-vpn:v1
+    container_name: VPN_Bridge_Ent1
+    privileged: true
+    cap_add: [ NET_ADMIN ]
+    volumes:
+      - ./scripts/VPN_Bridge.sh:/init.sh
+      - ./VPN_Build/vpn_client.py:/app/vpn_client.py
+    entrypoint: [ "/bin/sh", "/init.sh" ]
+    environment:
+      - VPN_SERVER_IP=120.0.44.5
+      - VPN_TARGET_NET=10.20.10.0/24
+      - VPN_USERNAME=thomas
+      - VPN_PASSWORD=superpassword
+    networks:
+      net_lan:
+        ipv4_address: 10.10.10.200
