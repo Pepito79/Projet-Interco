@@ -1,47 +1,48 @@
 #!/bin/sh
 echo "--- Config Client C1 (VPN) ---"
 
-# 1. Configuration de base (On s'assure que l'interface est UP)
+# 1. Configuration IP de base (LAN)
+ip addr flush dev eth0
+ip link set dev eth0 down
+ip addr add 192.168.2.10/24 dev eth0
 ip link set dev eth0 up
 
-# 2. Route par défaut vers la Box C1 (192.168.2.1)
-ip route del default 2>/dev/null || true
+# Route par défaut vers la Box
 ip route add default via 192.168.2.1
 
 # ---------------------------------------------------
-# 3. LANCEMENT DU VPN
+# 2. LANCEMENT DU VPN
 # ---------------------------------------------------
 echo "🚀 Démarrage du VPN..."
 
-# Adresse IP Publique du routeur R_Entreprise1
+# Adresse IP Publique du Routeur Entreprise (cible du tunnel)
 export VPN_SERVER_IP="120.0.34.2" 
 
-# On se place dans le dossier contenant le code Python
 cd /app
 
-# Lancement du client VPN en arrière-plan
+# Lancement du script python en arrière-plan
 python3 vpn_client.py &
 
-# Attente de la création de l'interface tun0
+# On attend que l'interface tun0 soit créée
 echo "⏳ Attente de tun0..."
 while ! ip link show tun0 > /dev/null 2>&1; do sleep 1; done
 
-# Config IP virtuelle du tunnel
+# Configuration de l'interface virtuelle
 ip addr add 10.0.0.2/24 dev tun0
 ip link set tun0 up
 ip link set tun0 mtu 1200
 
-# 4. ROUTAGE VPN
-# A. On force la connexion cryptée vers le serveur VPN à passer par la Box (Internet)
+# 3. ROUTAGE VPN
+# A. On force la connexion chiffrée à passer par la vraie passerelle (Internet)
 GW_PHYSIQUE="192.168.2.1"
 ip route add $VPN_SERVER_IP via $GW_PHYSIQUE dev eth0
 
-# B. On redirige tout le reste du trafic via le tunnel VPN
+# B. On redirige tout le reste du trafic dans le tunnel VPN
 ip route del default
 ip route add default via 10.0.0.1 dev tun0
 
 # DNS Google
 echo "nameserver 8.8.8.8" > /etc/resolv.conf
 
-# Garder le conteneur actif
+# Maintien du conteneur en vie
 tail -f /dev/null
