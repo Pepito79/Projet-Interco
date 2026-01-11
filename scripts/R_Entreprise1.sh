@@ -31,9 +31,9 @@ docker exec --privileged R_Entreprise1 ip addr flush dev eth2
 # eth0 -> net_34
 docker exec --privileged R_Entreprise1 ip addr add 120.0.34.2/24 dev eth0
 # eth1 -> net_ent_lan
-docker exec --privileged R_Entreprise1 ip addr add 10.10.1.1/29 dev eth1
+docker exec --privileged R_Entreprise1 ip addr add 10.10.1.1/29 dev eth2
 # eth2 -> net_ent_dmz
-docker exec --privileged R_Entreprise1 ip addr add 10.10.2.1/29 dev eth2
+docker exec --privileged R_Entreprise1 ip addr add 10.10.2.1/29 dev eth1
 
 # 4. Activation des interfaces
 docker exec --privileged R_Entreprise1 ip link set eth0 up
@@ -43,5 +43,7 @@ docker exec --privileged R_Entreprise1 ip link set eth2 up
 # 5. Redémarrage du service FRR
 # Maintenant que les IP sont propres, FRR peut lancer OSPF sans crash
 docker exec R_Entreprise1 /usr/lib/frr/frrinit.sh restart
+docker compose restart R_Entreprise1 #sinon ça bug
+
 
 echo "R_Entreprise1 est désormais stable et configuré."
