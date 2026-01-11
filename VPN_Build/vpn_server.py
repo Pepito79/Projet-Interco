@@ -13,6 +13,20 @@ IFF_TUN   = 0x0001
 IFF_NO_PI = 0x1000
 KEY = 0x99 
 
+# === 1. BASE DE DONNÉES UTILISATEURS (SIMULATION LDAP) ===
+USERS_DB = {
+    "thomas": "superpassword",  # Ton compte
+    "pepito": "admin123",       # Compte admin
+    "rh_user": "rhsecure"       # Compte RH
+}
+
+# === 2. ATTRIBUTION DES IP FIXES (IDENTITÉ RÉSEAU) ===
+IP_ALLOCATION = {
+    "thomas": "10.0.0.2",
+    "pepito": "10.0.0.10",
+    "rh_user": "10.0.0.20"
+}
+
 # Ajoute ceci après les imports
 def checksum(data):
     if len(data) % 2 != 0:
@@ -91,12 +105,40 @@ def recv_packet(sock):
         return None
 # --------------------------------------------------
 
+def handle_login(client_sock):
+    """Gère l'échange d'authentification"""
+    try:
+        # On attend "user:pass"
+        print("🔐 Attente des identifiants...")
+        data = client_sock.recv(1024).decode('utf-8').strip()
+        if ":" not in data:
+            print("❌ Format invalide reçu.")
+            return False, None
+            
+        username, password = data.split(":", 1)
+        
+        # Vérification
+        if USERS_DB.get(username) == password:
+            assigned_ip = IP_ALLOCATION.get(username, "10.0.0.100")
+            print(f"✅ Authentification OK pour {username}. IP attribuée : {assigned_ip}")
+            
+            # On envoie "OK:IP"
+            client_sock.send(f"OK:{assigned_ip}".encode('utf-8'))
+            return True, assigned_ip
+        else:
+            print(f"❌ Mot de passe incorrect pour {username}")
+            client_sock.send(b"FAIL")
+            return False, None
+    except Exception as e:
+        print(f"❌ Erreur Auth: {e}")
+        return False, None
+    
+# --- MAIN ---
 tun_fd = config_tun_dev()
-# Config IP via le script shell normalement, mais on garde la config de secours
 try:
     os.system("ip addr add 10.0.0.1/24 dev tun0")
     os.system("ip link set tun0 up")
-    os.system("ip link set tun0 mtu 1400") # Sécurité MTU
+    os.system("ip link set tun0 mtu 1400")
 except:
     pass
 
@@ -106,38 +148,50 @@ server.bind((IP_ECOUTE, PORT))
 server.listen(1)
 
 print(f"🎧 SERVEUR : En attente sur port {PORT}...")
-client_socket, addr = server.accept()
-print(f"🔗 SERVEUR : Connecté avec {addr}")
 
-inputs = [client_socket, tun_fd]
-
-try:
-    while True:
-        ready, _, _ = select.select(inputs, [], [])
-
-        for source in ready:
-            if source is client_socket:
-                # RECEPTION DEPUIS LE RESEAU (TCP)
-                data = recv_packet(client_socket)
-                if not data: 
-                    print("Client déconnecté.")
-                    exit(0)
-                
-                decrypted = xor_cipher(data)
-                os.write(tun_fd, decrypted)
+# Boucle pour accepter les connexions (simple : un client à la fois pour ce TP)
+while True:
+    try:
+        client_socket, addr = server.accept()
+        print(f"🔗 Connexion entrante de {addr}")
+        
+        # --- ETAPE AUTHENTIFICATION ---
+        auth_success, client_vpn_ip = handle_login(client_socket)
+        
+        if not auth_success:
+            client_socket.close()
+            print("⛔ Déconnexion du client non authentifié.\n")
+            continue # On attend le prochain
             
-            if source is tun_fd:
-                # RECEPTION DEPUIS LE TUNNEL (KERNEL)
-                packet = os.read(tun_fd, 4096)
-                if packet:
-                    # 👇 ON RÉPARE LE PAQUET AVANT DE L'ENVOYER 👇
-                    packet = fix_checksum(packet) 
-                    
-                    encrypted = xor_cipher(packet)
-                    send_packet(client_socket, encrypted)
+        print("🚀 Tunnel établi. Échange de paquets en cours...")
+        
+        inputs = [client_socket, tun_fd]
+        
+        # Boucle de transfert de données
+        try:
+            while True:
+                ready, _, _ = select.select(inputs, [], [])
 
-except KeyboardInterrupt:
-    print("\nArrêt.")
-finally:
-    client_socket.close()
-    server.close()
+                for source in ready:
+                    if source is client_socket:
+                        data = recv_packet(client_socket)
+                        if not data: 
+                            raise Exception("Déconnexion Client")
+                        
+                        decrypted = xor_cipher(data)
+                        os.write(tun_fd, decrypted)
+                    
+                    if source is tun_fd:
+                        packet = os.read(tun_fd, 4096)
+                        if packet:
+                            packet = fix_checksum(packet) 
+                            encrypted = xor_cipher(packet)
+                            send_packet(client_socket, encrypted)
+        except Exception as e:
+            print(f"Information: {e}")
+        finally:
+            client_socket.close()
+            print("♻️  Serveur prêt pour une nouvelle connexion.\n")
+
+    except KeyboardInterrupt:
+        break
