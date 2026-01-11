@@ -1,6 +1,11 @@
 #!/bin/sh
 echo "--- Config Client C1 (VPN) ---"
 
+# Tue les anciens processus Python qui bloquent le tunnel
+docker exec -it Client_C1 pkill -9 python3
+# Supprime l'interface tun0 si elle existe
+docker exec -it Client_C1 ip link delete tun0
+
 # 1. Configuration de base (On s'assure que l'interface est UP)
 ip link set dev eth0 up
 
