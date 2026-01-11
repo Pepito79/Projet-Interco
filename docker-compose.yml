@@ -322,6 +322,8 @@ services:
   Client_Ent1:
     image: alpine
     container_name: Client_Ent1
+    dns:
+      - 10.10.20.3
     command: /bin/sh -c "ip addr flush dev eth0 && udhcpc -i eth0 -b && sleep infinity"
     networks:
       - net_lan
@@ -331,6 +333,8 @@ services:
   Client_Ent2:
     image: alpine
     container_name: Client_Ent2
+    dns:
+      - 10.10.20.3
     command: /bin/sh -c "ip addr flush dev eth0 && udhcpc -i eth0 -b && sleep infinity"
     networks:
       - net_lan
@@ -376,8 +380,6 @@ services:
     environment:
       - FTP_USER=public
       - FTP_PASS=password123
-      - MIN_PORT=21000
-      - MAX_PORT=21010
     networks:
       net_37:
         ipv4_address: 120.0.37.5
