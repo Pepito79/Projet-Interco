@@ -1,17 +1,31 @@
 #!/bin/bash
-echo "Configuring R_Ent_LAN..."
+echo "Nettoyage et Configuration de R_Ent_LAN..."
 
-# Activer les interfaces
-docker exec --privileged R_Ent_LAN ip link set up dev eth0  # vers R_Entreprise1
-docker exec --privileged R_Ent_LAN ip link set up dev eth1  # vers LAN interne
+# 1. Activation du routage
+docker exec --privileged R_Ent_LAN sysctl -w net.ipv4.ip_forward=1
 
-# Installer dnsmasq si nécessaire
-docker exec --privileged R_Ent_LAN apk add --no-cache dnsmasq
+# 2. NETTOYAGE : On enlève les IPs automatiques de Docker pour éviter les doublons
+# On vide eth1 (LAN) pour être sûr de n'avoir QUE la .1
+docker exec --privileged R_Ent_LAN ip addr flush dev eth1
 
-# Copier le fichier de config (si pas déjà dans le conteneur)
-docker cp ./config/DHCP_Ent_LAN/dnsmasq.conf R_Ent_LAN:/etc/dnsmasq.conf
+# 3. ATTRIBUTION PROPRE
+# On remet l'IP Gateway sur eth1
+docker exec --privileged R_Ent_LAN ip addr add 10.10.10.1/24 dev eth1
 
-# Lancer dnsmasq en arrière-plan
-docker exec --privileged R_Ent_LAN sh -c "dnsmasq -k -C /etc/dnsmasq.conf &"
+# 4. ALLUMAGE
+docker exec --privileged R_Ent_LAN ip link set eth0 up
+docker exec --privileged R_Ent_LAN ip link set eth1 up
 
-echo "R_Ent_LAN configured."
+# 5. SYNCHRO FRR (A chaud)
+# On utilise 'replace' ou on ré-applique pour que Zebra soit synchro
+docker exec R_Ent_LAN vtysh -c "conf t" \
+  -c "int eth0" \
+  -c " ip address 10.10.1.2/29" \
+  -c "int eth1" \
+  -c " ip address 10.10.10.1/24" \
+  -c "end" -c "write"
+
+echo "Vérification de l'état (Il ne doit y avoir qu'une IP par interface) :"
+docker exec R_Ent_LAN ip -4 a show eth1
+
+sudo chown -R $USER:$USER ./config

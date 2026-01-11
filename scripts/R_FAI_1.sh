@@ -15,3 +15,6 @@ docker exec --privileged R_FAI_1 ip link set up dev eth3
 
 # interface eth4 -> net_39
 docker exec --privileged R_FAI_1 ip link set up dev eth4
+
+#interface eth5 -> net-44
+docker exec --privileged R_FAI_1 ip link set up dev eth5

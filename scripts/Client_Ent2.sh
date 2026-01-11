@@ -1,15 +1,14 @@
 #!/bin/bash
-echo "Configuring Client_Ent2 with DHCP..."
+echo "🚀 Configuration de Client_Ent2 (Entreprise 1) via DHCP..."
 
-# Activer l'interface eth0
+# 1. Activer l'interface eth0
 docker exec --privileged Client_Ent2 ip link set up dev eth0
 sleep 1
 
-# Installer le client DHCP si ce n'est pas déjà fait
-docker exec --privileged Client_Ent2 apk add --no-cache dhcpcd
+# 2. On utilise udhcpc (déjà présent sur Alpine) pour obtenir l'IP du serveur DHCP_Ent_LAN
+# On ajoute -n pour ne pas bloquer si le serveur ne répond pas
+docker exec --privileged Client_Ent2 udhcpc -i eth0 -n -q
 
-# Demander une IP automatiquement via DHCP
-docker exec --privileged Client_Ent2 dhcpcd -n eth0
-
-# Vérifier l'adresse IP attribuée
-docker exec --privileged Client_Ent2 ip addr show eth0
+# 3. Vérifier l'adresse IP attribuée (devrait être en 10.10.10.x)
+echo "📍 IP attribuée à Client_Ent2 :"
+docker exec Client_Ent2 ip -4 addr show eth0 | grep inet

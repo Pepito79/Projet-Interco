@@ -82,8 +82,8 @@ networks:
     ipam:
       config:
         - subnet: 10.10.10.0/24
-          gateway: 10.10.10.1
-
+          gateway: 10.10.10.254
+          ip_range: 10.10.10.240/28
   net_dmz:
     driver: bridge
     ipam:
@@ -91,8 +91,7 @@ networks:
         - subnet: 10.10.20.0/24
           gateway: 10.10.20.254
 
-  # --- SUPPRESSION DU DOUBLON NET_39 ICI ---
-
+# --- TES RÉSEAUX (Architecture AS2) ---
   NET_40:
     driver: bridge
     ipam:
@@ -111,6 +110,23 @@ networks:
       config:
         - subnet: 20.20.20.0/24
           gateway: 20.20.20.254
+
+  # --- LES RÉSEAUX D'ASAAD (Architecture Extension AS1) ---
+  net_44:
+    # Lien R_FAI_1 <-> R_Entreprise2
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.44.0/24
+          gateway: 120.0.44.254
+
+  net_ent2_lan:
+    # LAN interne du Site 2 (Asaad)
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.20.10.0/24
+          gateway: 10.20.10.254
 
 services:
   # R_FAI_1 (Central Router)
@@ -131,6 +147,8 @@ services:
         ipv4_address: 120.0.35.1
       net_39:
         ipv4_address: 120.0.39.1
+      net_44:
+        ipv4_address: 120.0.44.1
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -216,7 +234,8 @@ services:
     networks:
       net_ent_lan:
         ipv4_address: 10.10.1.2
-      net_lan: {}
+      net_lan:
+        ipv4_address: 10.10.10.1
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -303,6 +322,7 @@ services:
       - ./config/DHCP_Ent_LAN/dnsmasq.conf:/etc/dnsmasq.conf
     cap_add:
       - NET_ADMIN
+      - SYS_ADMIN
 
   # --- CLIENT C1 (VPN) ---
   Client_C1:
@@ -360,7 +380,7 @@ services:
   Client_Ent1:
     image: alpine
     container_name: Client_Ent1
-    command: /bin/sh -c "sleep infinity"
+    command: /bin/sh -c "ip addr flush dev eth0 && udhcpc -i eth0 -b && sleep infinity"
     networks:
       - net_lan
     cap_add:
@@ -369,7 +389,7 @@ services:
   Client_Ent2:
     image: alpine
     container_name: Client_Ent2
-    command: /bin/sh -c "sleep infinity"
+    command: /bin/sh -c "ip addr flush dev eth0 && udhcpc -i eth0 -b && sleep infinity"
     networks:
       - net_lan
     cap_add:
@@ -453,38 +473,96 @@ services:
         ipv4_address: 120.0.41.1
 
   # 3. Routeur du Client (Entreprise 2)
+
   R_Entreprise2:
     image: frrouting/frr
     container_name: R_Entreprise2
     privileged: true
     volumes:
-      - ./scripts/R_Entreprise2.sh:/etc/local.d/start.sh
+# -------------------------------------------------------
+  # 1. TON ROUTEUR (AS2 - Renommé pour éviter le conflit)
+  # -------------------------------------------------------
+  R_Entreprise_AS2:
+    image: frrouting/frr
+    container_name: R_Entreprise_AS2
+    privileged: true
+    volumes:
+      # Attention : Assure-toi d'avoir créé ce fichier script comme vu juste avant
+      - ./scripts/R_Entreprise_AS2.sh:/etc/local.d/start.sh
     networks:
-      NET_41: # Vers FAI 2 - IP: 120.0.41.2
+      NET_41: 
         ipv4_address: 120.0.41.2
-      NET_LAN_AS2: # LAN Interne - IP: 20.20.20.1
+      NET_LAN_AS2: 
         ipv4_address: 20.20.20.1
 
-# Serveur LAN 2
+  # TES Clients (AS2)
   Serveur_Entreprise_2:
     image: alpine
     container_name: Serveur_Entreprise_2
     privileged: true
     volumes:
-      - ./scripts/Serveur_Entreprise_2.sh:/start.sh  # <-- AJOUT ICI
-    command: sh /start.sh                           # <-- AJOUT ICI
+      - ./scripts/Serveur_Entreprise_2.sh:/start.sh
+    command: sh /start.sh
     networks:
       NET_LAN_AS2:
         ipv4_address: 20.20.20.2
 
-  # Client LAN 2
   Client_Entreprise_2:
     image: alpine
     container_name: Client_Entreprise_2
     privileged: true
     volumes:
-      - ./scripts/Client_Entreprise_2.sh:/start.sh   # <-- AJOUT ICI
-    command: sh /start.sh                            # <-- AJOUT ICI
+      - ./scripts/Client_Entreprise_2.sh:/start.sh
+    command: sh /start.sh
     networks:
       NET_LAN_AS2:
         ipv4_address: 20.20.20.3
+
+  # -------------------------------------------------------
+  # 2. LE ROUTEUR D'ASAAD (On le laisse tel quel)
+  # -------------------------------------------------------
+  R_Entreprise2:
+    image: frrouting/frr
+    container_name: R_Entreprise2
+    privileged: true
+    volumes:
+      - ./config/R_Entreprise2:/etc/frr
+    networks:
+      net_44:
+        ipv4_address: 120.0.44.2
+      net_ent2_lan:
+        ipv4_address: 10.20.10.9
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  # LES Clients d'Asaad
+  Client1_Ent2:
+    image: alpine
+    container_name: Client1_Ent_Site2
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.20.10.9 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    networks:
+      - net_ent2_lan
+    cap_add:
+      - NET_ADMIN
+
+  Client2_Ent2:
+    image: alpine
+    container_name: Client2_Ent_Site2
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.20.10.9 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    networks:
+      - net_ent2_lan
+    cap_add:
+      - NET_ADMIN
+
+  DHCP_Ent2:
+    image: alpine
+    container_name: DHCP_Ent2
+    command: /bin/sh -c "apk add --no-cache dnsmasq && dnsmasq -k -C /etc/dnsmasq.conf"
+    networks:
+      net_ent2_lan:
+        ipv4_address: 10.20.10.250
+    volumes:
+      - ./config/DHCP_Ent2/dnsmasq.conf:/etc/dnsmasq.conf
+    cap_add:
+      - NET_ADMIN
