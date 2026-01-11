@@ -473,14 +473,6 @@ services:
         ipv4_address: 120.0.41.1
 
   # 3. Routeur du Client (Entreprise 2)
-
-  R_Entreprise2:
-    image: frrouting/frr
-    container_name: R_Entreprise2
-    privileged: true
-    volumes:
-# -------------------------------------------------------
-  # 1. TON ROUTEUR (AS2 - Renommé pour éviter le conflit)
   # -------------------------------------------------------
   R_Entreprise_AS2:
     image: frrouting/frr
