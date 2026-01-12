@@ -1,6 +1,6 @@
 frr version 8.4_git
 frr defaults traditional
-hostname 3c0cb6391cda
+hostname bac02b2563fb
 no ipv6 forwarding
 !
 interface eth0
