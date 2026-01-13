@@ -110,6 +110,13 @@ networks:
         - subnet: 10.20.10.0/24
           gateway: 10.20.10.254
 
+  net_lan_as2:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 20.20.20.0/24
+          gateway: 20.20.20.254
+
 services:
   # R_FAI_1 (Central Router)
   R_FAI_1:
@@ -157,17 +164,97 @@ services:
         # Nettoyage (évite doublons au redémarrage)
         iptables -F FORWARD
         iptables -t nat -F POSTROUTING
+        iptables -X
+        
+        # Policies par défaut (sécurisées)
+        iptables -P INPUT DROP
+        iptables -P FORWARD DROP
+        iptables -P OUTPUT ACCEPT
 
-        # NAT B1 -> WAN (eth1)
+        # Loopback
+        iptables -A INPUT -i lo -j ACCEPT
+
+        # Autoriser les connexions déjà établies (INPUT)
+        iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+        
+        # Autoriser le ping (diagnostic)
+        iptables -A INPUT -p icmp -j ACCEPT
+
+        # Autoriser le DHCP depuis le LAN vers la box (si besoin)
+        iptables -A INPUT -i eth1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
+        
+        # Autoriser OSPF (Routing)
+        iptables -A INPUT -p 89 -j ACCEPT
+
+        # NAT B1 -> WAN (eth0)
         iptables -t nat -A POSTROUTING -s 192.168.101.0/24 -o eth0 -j MASQUERADE
 
-        # Forward LAN -> WAN
+        # Forward LAN (eth1) -> WAN (eth0)
         iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
-        # Retour WAN -> LAN (sessions établies)
+        
+        # Forward WAN (eth0) -> LAN (eth1) : Uniquement connexions établies
         iptables -A FORWARD -i eth0 -o eth1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 
         exec /usr/lib/frr/docker-start
       '
+
+  # Box_C1
+  # Box_C1
+  Box_C1:
+    image: frrouting/frr
+    container_name: Box_C1
+    privileged: true
+    volumes:
+      - ./config/Box_C1:/etc/frr
+    networks:
+      net_33:
+        ipv4_address: 120.0.33.2
+      net_c1:
+        ipv4_address: 192.168.2.5
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    command: >
+      bash -lc '
+         # Nettoyage (évite doublons au redémarrage)
+        iptables -F FORWARD
+        iptables -t nat -F POSTROUTING
+        iptables -X
+        
+        # Policies par défaut (sécurisées)
+        iptables -P INPUT DROP
+        iptables -P FORWARD DROP
+        iptables -P OUTPUT ACCEPT
+        
+        # Loopback
+        iptables -A INPUT -i lo -j ACCEPT
+
+        # Autoriser les paquets associés à des connexions déjà ouvertes (INPUT)
+        iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+        
+        # Autoriser le ping
+        iptables -A INPUT -p icmp -j ACCEPT
+
+        # Autoriser le DHCP depuis le LAN (si nécessaire, comme pour B1)
+        iptables -A INPUT -i eth1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
+
+        # Autoriser OSPF (Routing)
+        iptables -A INPUT -p 89 -j ACCEPT
+        
+        # NAT C1 -> WAN (eth0)
+        iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -o eth0 -j MASQUERADE
+        
+        # Forward LAN (eth1) -> WAN (eth0)
+        iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
+        
+        # Forward WAN (eth0) -> LAN (eth1) : Uniquement connexions établies
+        iptables -A FORWARD -i eth0 -o eth1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
+        exec /usr/lib/frr/docker-start
+      '
+
   DHCP_B1:
     image: debian:12
     container_name: DHCP_B1
@@ -246,36 +333,6 @@ services:
 
         exec dhcpd -4 -f -d -lf /var/lib/dhcp/dhcpd.leases -cf /etc/dhcp/dhcpd.conf eth0
       '
-  # Box_C1
-  Box_C1:
-    image: frrouting/frr
-    container_name: Box_C1
-    privileged: true
-    volumes:
-      - ./config/Box_C1:/etc/frr
-    networks:
-      net_33:
-        ipv4_address: 120.0.33.2
-      net_c1:
-        ipv4_address: 192.168.2.5
-    cap_add:
-      - NET_ADMIN
-      - SYS_ADMIN
-    sysctls:
-      net.ipv4.ip_forward: "1"
-    command: >
-      bash -lc '
-        # Nettoyage (évite doublons au redémarrage)
-        iptables -F FORWARD
-        iptables -t nat -F POSTROUTING
-
-        iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -o eth1 -j MASQUERADE
-        iptables -A FORWARD -i eth0 -o eth1 -j ACCEPT
-        iptables -A FORWARD -i eth1 -o eth0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-
-        exec /usr/lib/frr/docker-start
-      '
-
   # R_Entreprise1
   R_Entreprise1:
     image: frrouting/frr
@@ -360,17 +417,25 @@ services:
       - NET_ADMIN
       - SYS_ADMIN
 
+  # Client LAN Ent 1 (Nouveau)
+  Client_Ent1:
+    image: alpine
+    container_name: Client_Ent1
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    networks:
+      net_lan:
+        ipv4_address: 10.10.10.2
+    cap_add:
+      - NET_ADMIN
+
   # End Devices (Simulating Hosts)
   Client_B1:
     image: alpine
     container_name: Client_B1
     dns:
       - 120.0.36.2
-    command: /bin/sh -c "
-      ip route del default || true;
-      udhcpc -i eth0 -q -f;
-      sleep infinity "
-    
+    command: /bin/sh -c " ip route del default || true; udhcpc -i eth0 -q -f; sleep infinity "
+
     networks:
       net_b1: {}
     cap_add:
@@ -381,12 +446,7 @@ services:
     container_name: Serveur_B1
     volumes:
       - ./config/Serveur_B1:/var/www/html:ro
-    command: /bin/sh -c "
-      ip route del default || true;
-      ip route add default via 192.168.101.5;
-      apk add --no-cache python3;
-      cd /var/www/html;
-      python3 -m http.server 80"
+    command: /bin/sh -c " ip route del default || true; ip route add default via 192.168.101.5; apk add --no-cache python3; cd /var/www/html; python3 -m http.server 80"
     networks:
       net_b1:
         ipv4_address: 192.168.101.3
@@ -410,11 +470,8 @@ services:
     container_name: Client_C1
     dns:
       - 120.0.36.2
-    command: /bin/sh -c "
-      ip route del default || true;
-      udhcpc -i eth0 -q -f;
-      sleep infinity "
-    
+    command: /bin/sh -c " ip route del default || true; udhcpc -i eth0 -q -f; sleep infinity "
+
     networks:
       net_c1: {}
     cap_add:
@@ -445,27 +502,6 @@ services:
     cap_add:
       - NET_ADMIN
 
-  Client_Ent1:
-    image: alpine
-    container_name: Client_Ent1
-    dns:
-      - 10.10.20.3
-    command: /bin/sh -c "ip addr flush dev eth0 && udhcpc -i eth0 -b && sleep infinity"
-    networks:
-      - net_lan
-    cap_add:
-      - NET_ADMIN
-
-  Client_Ent2:
-    image: alpine
-    container_name: Client_Ent2
-    dns:
-      - 10.10.20.3
-    command: /bin/sh -c "ip addr flush dev eth0 && udhcpc -i eth0 -b && sleep infinity"
-    networks:
-      - net_lan
-    cap_add:
-      - NET_ADMIN
   Serveur_Entreprise_1:
     image: alpine
     container_name: Serveur_Entreprise_1
@@ -477,6 +513,20 @@ services:
         ipv4_address: 10.10.20.2
     cap_add:
       - NET_ADMIN
+
+  Serveur_VPN_Ent1:
+    image: alpine
+    container_name: Serveur_VPN_Ent1
+    privileged: true
+    volumes:
+      - ./VPN_Build:/vpn
+    command: /bin/sh -c "apk add --no-cache python3 iptables && ip route del default || true; ip route add default via 10.10.20.1 && iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE && python3 /vpn/vpn_server.py"
+    networks:
+      net_dmz:
+        ipv4_address: 10.10.20.10
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
 
   DNS_Ent_1:
     image: alpine
@@ -527,13 +577,46 @@ services:
       - NET_ADMIN
       - SYS_ADMIN
 
-  # Client sur le deuxième site
+  # Routeur Interne LAN Ent2 (Nouveau)
+  R_Ent2_LAN:
+    image: frrouting/frr
+    container_name: R_Ent2_LAN
+    privileged: true
+    volumes:
+      - ./config/R_Ent2_LAN:/etc/frr
+    networks:
+      net_ent2_lan:
+        ipv4_address: 10.20.10.253
+      net_lan_as2:
+        ipv4_address: 20.20.20.1
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  # Gateway VPN pour Site-to-Site (Ent2)
+  VPN_Gateway_Ent2:
+    image: alpine
+    container_name: VPN_Gateway_Ent2
+    privileged: true
+    volumes:
+      - ./VPN_Build:/vpn
+    # Command: Install python, add route to gateway, run client script (adapted)
+    command: /bin/sh -c "apk add --no-cache python3 iptables && ip route del default || true; ip route add default via 10.20.10.9 && python3 /vpn/vpn_client_site.py"
+    networks:
+      net_ent2_lan:
+        ipv4_address: 10.20.10.10
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  # Client sur le deuxième site (Déplacé dans LAN AS2)
   Client1_Ent2:
     image: alpine
     container_name: Client1_Ent_Site2
-    command: /bin/sh -c "ip route del default || true; ip route add default via 10.20.10.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    command: /bin/sh -c "ip route del default || true; ip route add default via 20.20.20.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
     networks:
-      - net_ent2_lan
+      net_lan_as2:
+        ipv4_address: 20.20.20.2
     cap_add:
       - NET_ADMIN
 
