@@ -46,4 +46,17 @@ docker exec --privileged R_Ent_DMZ ip route add 20.20.20.0/24 via 10.10.20.10 2>
 docker exec --privileged R_Entreprise1 iptables -A FORWARD -d 20.20.20.0/24 -j ACCEPT
 docker exec --privileged R_Entreprise1 iptables -A FORWARD -s 20.20.20.0/24 -j ACCEPT
 
+# 8b. DMZ -> Internet (Pour mises à jour, ex: apk add)
+docker exec --privileged R_Entreprise1 iptables -A FORWARD -s 10.10.20.0/24 -o eth2 -j ACCEPT
+
+
 echo "✅ Firewall mis à jour pour la DMZ interne (10.10.20.2) et le VPN."
+
+# 9. VOIP services (Asterisk 10.10.20.20)
+# SIP (5060 UDP)
+docker exec --privileged R_Entreprise1 iptables -A FORWARD -p udp -d 10.10.20.20 --dport 5060 -j ACCEPT
+docker exec --privileged R_Entreprise1 iptables -A FORWARD -p udp -s 10.10.20.20 -d 10.10.10.0/24 -j ACCEPT
+
+# RTP (10000-10100 UDP)
+docker exec --privileged R_Entreprise1 iptables -A FORWARD -p udp -d 10.10.20.20 --dport 10000:10100 -j ACCEPT
+docker exec --privileged R_Entreprise1 iptables -A FORWARD -p udp -s 10.10.20.20 -d 10.10.10.0/24 --sport 10000:10100 -j ACCEPT
