@@ -153,10 +153,50 @@ services:
       net_32:
         ipv4_address: 120.0.32.2
       net_b1:
-        ipv4_address: 192.168.101.1
+        ipv4_address: 192.168.101.5
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    command: >
+      bash -lc '
+        # Nettoyage (évite doublons au redémarrage)
+        iptables -F FORWARD
+        iptables -t nat -F POSTROUTING
+        iptables -X
+        
+        # Policies par défaut (sécurisées)
+        iptables -P INPUT DROP
+        iptables -P FORWARD DROP
+        iptables -P OUTPUT ACCEPT
+
+        # Loopback
+        iptables -A INPUT -i lo -j ACCEPT
+
+        # Autoriser les connexions déjà établies (INPUT)
+        iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+        
+        # Autoriser le ping (diagnostic)
+        iptables -A INPUT -p icmp -j ACCEPT
+
+        # Autoriser le DHCP depuis le LAN vers la box (si besoin)
+        iptables -A INPUT -i eth1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
+        
+        # Autoriser OSPF (Routing)
+        iptables -A INPUT -p 89 -j ACCEPT
+
+        # NAT B1 -> WAN (eth0)
+        iptables -t nat -A POSTROUTING -s 192.168.101.0/24 -o eth0 -j MASQUERADE
+
+        # Forward LAN (eth1) -> WAN (eth0)
+        iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
+        
+        # Forward WAN (eth0) -> LAN (eth1) : Uniquement connexions établies
+        iptables -A FORWARD -i eth0 -o eth1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
+        exec /usr/lib/frr/docker-start
+      '
 
   # Box_C1
   Box_C1:
@@ -169,10 +209,130 @@ services:
       net_33:
         ipv4_address: 120.0.33.2
       net_c1:
-        ipv4_address: 192.168.2.1
+        ipv4_address: 192.168.2.5
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    command: >
+      bash -lc '
+         # Nettoyage (évite doublons au redémarrage)
+        iptables -F FORWARD
+        iptables -t nat -F POSTROUTING
+        iptables -X
+        
+        # Policies par défaut (sécurisées)
+        iptables -P INPUT DROP
+        iptables -P FORWARD DROP
+        iptables -P OUTPUT ACCEPT
+        
+        # Loopback
+        iptables -A INPUT -i lo -j ACCEPT
+
+        # Autoriser les paquets associés à des connexions déjà ouvertes (INPUT)
+        iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+        
+        # Autoriser le ping
+        iptables -A INPUT -p icmp -j ACCEPT
+
+        # Autoriser le DHCP depuis le LAN (si nécessaire, comme pour B1)
+        iptables -A INPUT -i eth1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
+
+        # Autoriser OSPF (Routing)
+        iptables -A INPUT -p 89 -j ACCEPT
+        
+        # NAT C1 -> WAN (eth0)
+        iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -o eth0 -j MASQUERADE
+        
+        # Forward LAN (eth1) -> WAN (eth0)
+        iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
+        
+        # Forward WAN (eth0) -> LAN (eth1) : Uniquement connexions établies
+        iptables -A FORWARD -i eth0 -o eth1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
+        exec /usr/lib/frr/docker-start
+      '
+
+
+  DHCP_B1:
+    image: debian:12
+    container_name: DHCP_B1
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    networks:
+      net_b1:
+        ipv4_address: 192.168.101.10
+    command: |
+      bash -lc '
+        set -e
+
+        apt-get update
+        apt-get install -y isc-dhcp-server iproute2
+
+        # S’assurer que la base de baux existe (sinon dhcpd quitte)
+        mkdir -p /var/lib/dhcp
+        touch /var/lib/dhcp/dhcpd.leases
+        touch /var/lib/dhcp/dhcpd.leases~
+
+        printf "INTERFACESv4=\"eth0\"\nINTERFACESv6=\"\"\n" > /etc/default/isc-dhcp-server
+
+        cat > /etc/dhcp/dhcpd.conf <<'"'"'EOF'"'"'
+      authoritative;
+      default-lease-time 600;
+      max-lease-time 7200;
+
+      option domain-name-servers 120.0.36.2;
+
+      subnet 192.168.101.0 netmask 255.255.255.0 {
+      range 192.168.101.50 192.168.101.200;
+      option routers 192.168.101.5;
+      option broadcast-address 192.168.101.255;
+      }
+      EOF
+
+        exec dhcpd -4 -f -d -lf /var/lib/dhcp/dhcpd.leases -cf /etc/dhcp/dhcpd.conf eth0
+      '
+  DHCP_C1:
+    image: debian:12
+    container_name: DHCP_C1
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    networks:
+      net_c1:
+        ipv4_address: 192.168.2.10
+    command: |
+      bash -lc '
+        set -e
+
+        apt-get update
+        apt-get install -y isc-dhcp-server iproute2
+
+        # S’assurer que la base de baux existe (sinon dhcpd quitte)
+        mkdir -p /var/lib/dhcp
+        touch /var/lib/dhcp/dhcpd.leases
+        touch /var/lib/dhcp/dhcpd.leases~
+
+        printf "INTERFACESv4=\"eth0\"\nINTERFACESv6=\"\"\n" > /etc/default/isc-dhcp-server
+
+        cat > /etc/dhcp/dhcpd.conf <<'"'"'EOF'"'"'
+      authoritative;
+      default-lease-time 600;
+      max-lease-time 7200;
+
+      option domain-name-servers 120.0.36.2;
+
+      subnet 192.168.2.0 netmask 255.255.255.0 {
+      range 192.168.2.50 192.168.2.200;
+      option routers 192.168.2.5;
+      option broadcast-address 192.168.2.255;
+      }
+      EOF
+
+        exec dhcpd -4 -f -d -lf /var/lib/dhcp/dhcpd.leases -cf /etc/dhcp/dhcpd.conf eth0
+      '
 
   # R_Entreprise1
   R_Entreprise1:
@@ -273,17 +433,21 @@ services:
   Client_B1:
     image: alpine
     container_name: Client_B1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.101.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    dns:
+      - 120.0.36.2
+    command: /bin/sh -c " ip route del default || true; udhcpc -i eth0 -q -f; sleep infinity "
+
     networks:
-      net_b1:
-        ipv4_address: 192.168.101.2
+      net_b1: {}
     cap_add:
       - NET_ADMIN
 
   Serveur_B1:
     image: alpine
     container_name: Serveur_B1
-    command: /bin/sh -c "ip route del default || true; ip route add default via 192.168.101.1 && sleep infinity"
+    volumes:
+      - ./config/Serveur_B1:/var/www/html:ro
+    command: /bin/sh -c " ip route del default || true; ip route add default via 192.168.101.5; apk add --no-cache python3; cd /var/www/html; python3 -m http.server 80"
     networks:
       net_b1:
         ipv4_address: 192.168.101.3
@@ -305,15 +469,14 @@ services:
   Client_C1:
     image: alpine
     container_name: Client_C1
-    volumes:
-      - ./VPN_Build:/vpn
-    command: /bin/sh -c "apk add --no-cache python3 tcpdump && ip route del default || true; ip route add default via 192.168.2.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    dns:
+      - 120.0.36.2
+    command: /bin/sh -c " ip route del default || true; udhcpc -i eth0 -q -f; sleep infinity "
+
     networks:
-      net_c1:
-        ipv4_address: 192.168.2.2
+      net_c1: {}
     cap_add:
       - NET_ADMIN
-      - SYS_ADMIN
 
   Serveur_Web1:
     image: alpine
