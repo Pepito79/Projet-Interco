@@ -2,6 +2,7 @@
 echo "Configuring R_FAI_1..."
 
 # interface eth0 -> net_32
+docker exec --privileged R_FAI_1 sysctl -w net.ipv4.ip_forward=1
 docker exec --privileged R_FAI_1 ip link set up dev eth0
 
 # interface eth1 -> net_33

@@ -161,13 +161,15 @@ def main():
                         dest_ip = packet[16:20]
                         target_addr = get_target_addr(dest_ip)
                         
+                        # print(f"[Server] TUN Packet to {socket.inet_ntoa(dest_ip)} -> Target {target_addr}", flush=True)
+
                         if target_addr:
                              # Encrypt TUN data
                             encrypted_packet = xor_data(packet)
                             sock.sendto(encrypted_packet, target_addr)
                         else:
                             # Broadcast/Unknown - drop or debug
-                            # print(f"[Server] No route for dest {socket.inet_ntoa(dest_ip)}", flush=True)
+                            print(f"[Server] No route for dest {socket.inet_ntoa(dest_ip)}. Header: {packet[:20].hex()}", flush=True)
                             pass
                 except Exception as e:
                     print(f"[Server] Error handling TUN packet: {e}", flush=True)

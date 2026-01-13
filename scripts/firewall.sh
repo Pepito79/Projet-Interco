@@ -20,10 +20,13 @@ docker exec --privileged R_Entreprise1 iptables -A FORWARD -m state --state RELA
 # 3b. DNAT VPN : Rediriger le trafic entrant sur 120.0.34.2:9999 vers 10.10.20.10:9999
 docker exec --privileged R_Entreprise1 iptables -t nat -A PREROUTING -d 120.0.34.2 -p udp --dport 9999 -j DNAT --to-destination 10.10.20.10:9999
 
-# 3c. SNAT VPN : Assurer le retour via R_Entreprise1 (évite le routage asymétrique via Gateway Docker)
-docker exec --privileged R_Entreprise1 iptables -t nat -A POSTROUTING -d 10.10.20.10 -p udp --dport 9999 -j MASQUERADE
-# 3d. SNAT Global : Masquerade traffic leaving WAN (eth1)
+# 3c. SNAT VPN : Removed (Let Server see real Gateway IP)
+# docker exec --privileged R_Entreprise1 iptables -t nat -A POSTROUTING -d 10.10.20.10 -p udp --dport 9999 -j MASQUERADE
+
+# 3d. SNAT Global : Masquerade traffic leaving WAN (eth0) AND DMZ Link (eth1)
+docker exec --privileged R_Entreprise1 iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 docker exec --privileged R_Entreprise1 iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE
+docker exec --privileged R_Entreprise1 iptables -t nat -A POSTROUTING -o eth2 -j MASQUERADE
 
 # 4. LAN -> DMZ & INTERNET : Autoriser le LAN (10.10.10.0/24) à sortir
 docker exec --privileged R_Entreprise1 iptables -A FORWARD -s 10.10.10.0/24 -j ACCEPT
@@ -37,6 +40,9 @@ docker exec --privileged R_Entreprise1 iptables -A FORWARD -p udp -d 10.10.20.10
 
 # 6b. VPN (DMZ) -> LAN : Autoriser le trafic déchiffré du VPN vers le LAN
 docker exec --privileged R_Entreprise1 iptables -A FORWARD -s 10.10.20.10 -d 10.10.10.0/24 -j ACCEPT
+
+# 6c. VPN Server Output : Allow VPN Server to reply to Internet/Gateway
+docker exec --privileged R_Entreprise1 iptables -A FORWARD -s 10.10.20.10 -j ACCEPT
 
 # 7. ICMP (Ping) : Le LAN peut pinger la DMZ et l'extérieur, mais l'inverse est faux
 docker exec --privileged R_Entreprise1 iptables -A FORWARD -p icmp -s 10.10.10.0/24 -j ACCEPT

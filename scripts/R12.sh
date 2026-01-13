@@ -1,6 +1,9 @@
 #!/bin/bash
 echo "Configuring R12..."
 
+# 0. Enable Forwarding
+docker exec --privileged R12 sysctl -w net.ipv4.ip_forward=1
+
 # interface eth0 -> net_36
 docker exec --privileged R12 ip link set up dev eth0
 

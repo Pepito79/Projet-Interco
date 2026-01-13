@@ -1,6 +1,9 @@
 #!/bin/bash
 echo "Configuring R11..."
 
+# 0. Enable Forwarding
+docker exec --privileged R11 sysctl -w net.ipv4.ip_forward=1
+
 # interface eth0 -> net_35
 docker exec --privileged R11 ip link set up dev eth0
 

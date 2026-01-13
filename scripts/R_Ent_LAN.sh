@@ -14,4 +14,4 @@ docker exec --privileged R_Ent_LAN ip link set eth1 up
 echo "Vérification de l'état (Il ne doit y avoir qu'une IP par interface) :"
 docker exec R_Ent_LAN ip -4 a show eth1
 
-sudo chown -R $USER:$USER ./config
+# sudo chown -R $USER:$USER ./config

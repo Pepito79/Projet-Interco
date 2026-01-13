@@ -1,5 +1,7 @@
 #!/bin/bash
 echo "Configuring Client_C1..."
+# Install Python3 for VPN Client
+docker exec --privileged Client_C1 apk add python3
 
 # interface eth0 -> net_c1
 docker exec --privileged Client_C1 ip link set up dev eth0

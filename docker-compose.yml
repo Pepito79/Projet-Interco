@@ -358,7 +358,7 @@ services:
     privileged: true
     volumes:
       - ./VPN_Build:/vpn
-    command: /bin/sh -c "apk add --no-cache python3 iptables && ip route del default || true; ip route add default via 10.10.20.1 && iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE && python3 /vpn/vpn_server.py"
+    command: /bin/sh -c "apk add --no-cache python3 iptables && ip route del default || true; ip route add default via 10.10.20.1 && python3 /vpn/vpn_server.py"
     networks:
       net_dmz:
         ipv4_address: 10.10.20.10
@@ -397,6 +397,8 @@ services:
     networks:
       net_37:
         ipv4_address: 120.0.37.5
+    volumes:
+      - ./config/ftp:/ftp
     cap_add:
       - NET_ADMIN
     # Routeur du deuxième site (Branche)
