@@ -1,0 +1,1 @@
+docker compose restart VPN_Gateway_Ent2

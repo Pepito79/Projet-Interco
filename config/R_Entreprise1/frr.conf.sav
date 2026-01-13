@@ -7,8 +7,6 @@ service integrated-vtysh-config
 !
 password zebra
 !
-ip route 20.20.20.0/24 10.10.2.2
-!
 interface eth0
  description Vers_FAI
 exit

@@ -1,0 +1,42 @@
+frr version 8.1
+frr defaults traditional
+hostname R_Entreprise2
+log syslog informational
+no ipv6 forwarding
+!
+interface eth0
+ description Lien_vers_FAI_R_FAI_1
+ ip address 120.0.44.2/24
+!
+interface eth1
+ description LAN_Site_2
+ ip address 10.20.10.1/24
+!
+router ospf
+ ospf router-id 120.0.44.2
+ network 120.0.44.0/24 area 0
+ network 10.20.10.0/24 area 0
+ ! Filter outbound updates to neighbours? Better: Filter redistribution if redistributing.
+ ! But here we are using 'network' commands.
+ ! We should filter LSA generation? No, 'network' puts interfaces into OSPF.
+ ! R_Entreprise2 *needs* to know 10.20.10.0/24 to route return traffic.
+ ! PROBLEM: All routers including R_FAI are in Area 0.
+ ! R_FAI shouldn't be in Area 0 with Enterprise routers if we want privacy without filtering.
+ ! Quick Fix: Use access-list to block advertisement of private IPs?
+ ! OSPF is link-state, you can't filter LSAs *within* an area easily.
+ ! CHANGING ARCHITECTURE: Put R_Entreprise2 <-> R_Ent2_LAN in a different area?
+ ! OR: Use 'distribute-list' to prevent installing routes? No, R_FAI would still have LSAs.
+ ! CORRECT FIX FOR OSPF SINGLE AREA: You can't hide LSAs in the same Area.
+ ! CHECK: default config implies R_FAI and R_Entreprise2 are neighbors.
+ ! If they are neighbors, they sync LSDB.
+ ! OPTION 1: Switch R_Entreprise2 <-> R_FAI to RIP or BGP? Too complex.
+ ! OPTION 2: Put R_Entreprise2 <-> LAN in Area 1, and R_Entreprise2 <-> FAI in Area 0?
+ ! R_FAI would still see Summary LSAs (Type 3) unless we filter Area 1 -> Area 0 on ABR (R_Entreprise2).
+ ! Let's Try: Move Site 2 LAN to Area 2.
+ area 2 range 10.20.10.0/24 not-advertise
+ area 2 range 20.20.20.0/24 not-advertise
+ network 10.20.10.0/24 area 2
+
+!
+line vty
+!

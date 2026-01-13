@@ -22,9 +22,9 @@ sleep 1
 
 # 1. TEST DHCP & IP
 draw_box "VÉRIFICATION DHCP DU CLIENT"
-CMD="docker exec Client_Ent2 ip -4 addr show eth0"
+CMD="docker exec Client_Ent1 ip -4 addr show eth0"
 echo -e "${NC}Exécution : ${YELLOW}$CMD${NC}"
-CLIENT_IP=$(eval $CMD | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+CLIENT_IP=$(eval $CMD | grep "inet " | awk '{print $2}' | cut -d/ -f1 | head -n 1)
 
 if [ -z "$CLIENT_IP" ]; then
     echo -e "${RED}❌ ÉCHEC : Aucune IP attribuée par le DHCP.${NC}"
@@ -35,7 +35,7 @@ echo ""
 
 # 2. TEST PING SERVEUR RH
 draw_box "CONNECTIVITÉ INTERNE (LAN)"
-CMD="docker exec Client_Ent2 ping -c 1 -W 1 10.10.10.5"
+CMD="docker exec Client_Ent1 ping -c 1 -W 1 10.10.10.5"
 echo -e "${NC}Exécution : ${YELLOW}$CMD${NC}"
 if eval $CMD > /dev/null; then
     echo -e "${GREEN}✅ SUCCÈS : Le serveur RH répond.${NC}"
@@ -46,7 +46,7 @@ echo ""
 
 # 3. TEST PING DMZ
 draw_box "ROUTAGE VERS LA DMZ"
-CMD="docker exec Client_Ent2 ping -c 1 -W 1 10.10.20.2"
+CMD="docker exec Client_Ent1 ping -c 1 -W 1 10.10.20.2"
 echo -e "${NC}Exécution : ${YELLOW}$CMD${NC}"
 if eval $CMD > /dev/null; then
     echo -e "${GREEN}✅ SUCCÈS : Traversée des routeurs vers la DMZ OK.${NC}"
@@ -57,7 +57,7 @@ echo ""
 
 # 4. TEST DNS
 draw_box "RÉSOLUTION DE NOM (DNS INTERNE)"
-CMD="docker exec Client_Ent2 nslookup www.entreprise.com 10.10.20.3"
+CMD="docker exec Client_Ent1 nslookup www.entreprise.com 10.10.20.3"
 echo -e "${NC}Exécution : ${YELLOW}$CMD${NC}"
 DNS_RESULT=$(eval $CMD 2>/dev/null | grep "Address" | tail -n 1 | awk '{print $2}')
 
