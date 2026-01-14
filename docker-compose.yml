@@ -481,14 +481,19 @@ services:
   Client_C1:
     image: alpine
     container_name: Client_C1
+    privileged: true
+    volumes:
+      - ./VPN_Build:/vpn
     dns:
       - 120.0.36.2
-    command: /bin/sh -c "ip route del default || true; udhcpc -i eth0 -q -f & while ! ip route show | grep default; do sleep 1; done; ip route replace default via 192.168.2.5; echo 'nameserver 120.0.36.2' > /etc/resolv.conf; sleep infinity"
+    command: /bin/sh -c "ip route del default || true; udhcpc -i eth0 -q -f & while ! ip route show | grep default; do sleep 1; done; ip route replace default via 192.168.2.5; echo 'nameserver 120.0.36.2' > /etc/resolv.conf; sleep 2; apk add --no-cache python3 iptables; sleep infinity"
 
     networks:
       net_c1: {}
     cap_add:
       - NET_ADMIN
+      - SYS_ADMIN
+
 
   Serveur_Web1:
     image: alpine
