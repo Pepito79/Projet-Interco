@@ -43,7 +43,6 @@ docker exec --privileged R_Entreprise1 iptables -A FORWARD -p icmp -s 10.10.10.0
 
 # 8. Access VPN Site-to-Site (20.20.20.0/24)
 docker exec --privileged R_Ent_DMZ ip route add 20.20.20.0/24 via 10.10.20.10 2>/dev/null || true
-docker exec --privileged R_Ent_LAN ip route add 20.20.20.0/24 via 10.10.1.1 2>/dev/null || true
 docker exec --privileged R_Entreprise1 iptables -A FORWARD -d 20.20.20.0/24 -j ACCEPT
 docker exec --privileged R_Entreprise1 iptables -A FORWARD -s 20.20.20.0/24 -j ACCEPT
 
