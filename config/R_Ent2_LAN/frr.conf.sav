@@ -1,0 +1,25 @@
+frr version 8.1
+frr defaults traditional
+hostname R_Ent2_LAN
+log syslog informational
+no ipv6 forwarding
+!
+interface eth0
+ description Uplink_vers_R_Entreprise2
+ ip address 10.20.10.253/24
+!
+interface eth1
+ description LAN_AS2
+ ip address 20.20.20.1/24
+!
+router ospf
+ ospf router-id 10.20.10.253
+ network 10.20.10.0/24 area 0
+ network 20.20.20.0/24 area 0
+!
+ip route 10.10.10.0/24 10.20.10.10
+ip route 10.10.20.0/24 10.20.10.10
+ip route 192.168.2.0/24 10.20.10.10
+!
+line vty
+!

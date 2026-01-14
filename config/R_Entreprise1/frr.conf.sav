@@ -1,0 +1,31 @@
+frr version 8.4_git
+frr defaults traditional
+hostname 83af31930614
+log syslog informational
+no ipv6 forwarding
+service integrated-vtysh-config
+!
+password zebra
+!
+interface eth0
+ description Vers_FAI
+exit
+!
+interface eth1
+ description Vers DMZ
+exit
+!
+interface eth2
+ description Vers_R_Ent_LAN
+exit
+!
+router ospf
+ ospf router-id 10.10.1.1
+ redistribute connected
+ network 10.10.1.0/29 area 0.0.0.1
+ network 10.10.2.0/29 area 0.0.0.1
+ network 120.0.34.0/24 area 0.0.0.0
+ area 0.0.0.1 range 10.20.10.0/24 not-advertise
+ area 0.0.0.1 range 20.20.20.0/24 not-advertise
+exit
+!

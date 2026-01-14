@@ -1,0 +1,14 @@
+Pour supprimer tous les containers sur le dossier (grand ménage si ça marche pas): 
+docker stop $(docker ps -aq)
+docker rm $(docker ps -aq)
+docker system prune -a --volumes
+
+docker-compose down
+
+
+docker-compose up -d
+
+chmod +x configure_network.sh
+./configure_network.sh
+
+docker exec Client_B1 ping -c 2 192.168.2.2

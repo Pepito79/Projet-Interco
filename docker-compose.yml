@@ -1,0 +1,504 @@
+# version: '3.8'
+
+networks:
+  net_32:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.32.0/24
+          gateway: 120.0.32.254
+  net_33:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.33.0/24
+          gateway: 120.0.33.254
+  net_34:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.34.0/24
+          gateway: 120.0.34.254
+  net_35:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.35.0/24
+          gateway: 120.0.35.254
+  net_39:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.39.0/24
+          gateway: 120.0.39.254
+  net_38:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.38.0/24
+          gateway: 120.0.38.254
+  net_37:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.37.0/24
+          gateway: 120.0.37.254
+  net_36:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.36.0/24
+          gateway: 120.0.36.254
+  net_b1:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.101.0/24
+          gateway: 192.168.101.254
+  net_c1:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.2.0/24
+          gateway: 192.168.2.254
+
+  net_ent_lan:
+    # Lien point-à-point R_Entreprise1 <-> R_LAN
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.1.0/29
+          gateway: 10.10.1.6
+
+  net_ent_dmz:
+    # Lien point-à-point R_Entreprise1 <-> R_DMZ
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.2.0/29
+          gateway: 10.10.2.6
+
+  net_lan:
+    # LAN des travailleurs
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+          gateway: 10.10.10.254
+          ip_range: 10.10.10.240/28
+  net_dmz:
+    # LAN de la DMZ
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.20.0/24
+          gateway: 10.10.20.254
+
+  net_44:
+    # Lien R_FAI_1 <-> R_Entreprise2
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 120.0.44.0/24
+          gateway: 120.0.44.254
+
+  net_ent2_lan:
+    # LAN interne du Site 2
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.20.10.0/24
+          gateway: 10.20.10.254
+
+  net_lan_as2:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 20.20.20.0/24
+          gateway: 20.20.20.254
+
+services:
+  # R_FAI_1 (Central Router)
+  R_FAI_1:
+    image: frrouting/frr
+    container_name: R_FAI_1
+    privileged: true
+    volumes:
+      - ./config/R_FAI_1:/etc/frr
+    networks:
+      net_32:
+        ipv4_address: 120.0.32.1
+      net_33:
+        ipv4_address: 120.0.33.1
+      net_34:
+        ipv4_address: 120.0.34.1
+      net_35:
+        ipv4_address: 120.0.35.1
+      net_39:
+        ipv4_address: 120.0.39.1
+      net_44:
+        ipv4_address: 120.0.44.1
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  # Box_B1 simplifiée
+  Box_B1:
+    image: frrouting/frr
+    container_name: Box_B1
+    privileged: true
+    volumes:
+      - ./config/Box_B1:/etc/frr
+    networks:
+      net_32:
+        ipv4_address: 120.0.32.2
+      net_b1:
+        ipv4_address: 192.168.101.5
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  # Box_C1 simplifiée
+  Box_C1:
+    image: frrouting/frr
+    container_name: Box_C1
+    privileged: true
+    volumes:
+      - ./config/Box_C1:/etc/frr
+    networks:
+      net_33:
+        ipv4_address: 120.0.33.2
+      net_c1:
+        ipv4_address: 192.168.2.5
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+  # R_Entreprise1
+  R_Entreprise1:
+    image: frrouting/frr
+    container_name: R_Entreprise1
+    privileged: true
+    volumes:
+      - ./config/R_Entreprise1:/etc/frr
+    networks:
+      net_34:
+        ipv4_address: 120.0.34.2
+      net_ent_lan:
+        ipv4_address: 10.10.1.1
+      net_ent_dmz:
+        ipv4_address: 10.10.2.1
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  R_Ent_LAN:
+    image: frrouting/frr
+    container_name: R_Ent_LAN
+    privileged: true
+    volumes:
+      - ./config/R_Ent_LAN:/etc/frr
+    networks:
+      net_ent_lan:
+        ipv4_address: 10.10.1.2
+      net_lan:
+        ipv4_address: 10.10.10.1
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  R_Ent_DMZ:
+    image: frrouting/frr
+    container_name: R_Ent_DMZ
+    privileged: true
+    volumes:
+      - ./config/R_Ent_DMZ:/etc/frr
+    networks:
+      net_ent_dmz:
+        ipv4_address: 10.10.2.2
+      net_dmz:
+        ipv4_address: 10.10.20.1
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  # R11
+  R11:
+    image: frrouting/frr
+    container_name: R11
+    privileged: true
+    volumes:
+      - ./config/R11:/etc/frr
+    networks:
+      net_35:
+        ipv4_address: 120.0.35.2
+      net_37:
+        ipv4_address: 120.0.37.1
+      net_38:
+        ipv4_address: 120.0.38.1
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  # R12
+  R12:
+    image: frrouting/frr
+    container_name: R12
+    privileged: true
+    volumes:
+      - ./config/R12:/etc/frr
+    networks:
+      net_36:
+        ipv4_address: 120.0.36.1
+      net_38:
+        ipv4_address: 120.0.38.2
+      net_39:
+        ipv4_address: 120.0.39.2
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  # Client LAN Ent 1 (Nouveau)
+  Client_Ent1:
+    image: alpine
+    container_name: Client_Ent1
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    networks:
+      net_lan: {}
+      # ipv4_address: 10.10.10.2
+    cap_add:
+      - NET_ADMIN
+
+  # End Devices (Simulating Hosts)
+  Client_B1:
+    image: alpine
+    container_name: Client_B1
+    dns:
+      - 120.0.36.2
+    command: /bin/sh -c "ip route del default || true; udhcpc -i eth0 -q -f & while ! ip route show | grep default; do sleep 1; done; ip route replace default via 192.168.101.5; echo 'nameserver 120.0.36.2' > /etc/resolv.conf; sleep infinity"
+
+    networks:
+      net_b1: {}
+    cap_add:
+      - NET_ADMIN
+
+  Serveur_B1:
+    image: alpine
+    container_name: Serveur_B1
+    volumes:
+      - ./config/Serveur_B1:/var/www/html:ro
+    command: /bin/sh -c " ip route del default || true; ip route add default via 192.168.101.5; apk add --no-cache python3; cd /var/www/html; python3 -m http.server 80"
+    networks:
+      net_b1:
+        ipv4_address: 192.168.101.3
+    cap_add:
+      - NET_ADMIN
+  DHCP_Ent_LAN:
+    image: alpine
+    container_name: DHCP_Ent_LAN
+    command: /bin/sh -c "apk add --no-cache dnsmasq && dnsmasq -k -C /etc/dnsmasq.conf"
+    networks:
+      net_lan:
+        ipv4_address: 10.10.10.250
+    volumes:
+      - ./config/DHCP_Ent_LAN/dnsmasq.conf:/etc/dnsmasq.conf
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  Client_C1:
+    image: alpine
+    container_name: Client_C1
+    privileged: true
+    volumes:
+      - ./VPN_Build:/vpn
+    dns:
+      - 120.0.36.2
+    command: /bin/sh -c "ip route del default || true; udhcpc -i eth0 -q -f & while ! ip route show | grep default; do sleep 1; done; ip route replace default via 192.168.2.5; echo 'nameserver 120.0.36.2' > /etc/resolv.conf; sleep 2; apk add --no-cache python3 iptables; sleep infinity"
+
+    networks:
+      net_c1: {}
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  Serveur_Web1:
+    image: alpine
+    container_name: Serveur_Web1
+    volumes:
+      - ./config/web:/var/www/html
+    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.37.1 && apk add --no-cache python3 py3-pip openssh-client && pip install flask --break-system-packages && python3 /var/www/html/app.py"
+    networks:
+      net_37:
+        ipv4_address: 120.0.37.2
+    cap_add:
+      - NET_ADMIN
+
+  DNS_1:
+    image: alpine
+    container_name: DNS_1
+    volumes:
+      - ./config/DNS_1/dnsmasq.conf:/etc/dnsmasq.conf
+      - ./config/DNS_1/hosts:/etc/dnsmasq.hosts
+    command: /bin/sh -c "ip route del default || true; ip route add default via 120.0.36.1 && apk add --no-cache dnsmasq && dnsmasq -k -C /etc/dnsmasq.conf"
+    networks:
+      net_36:
+        ipv4_address: 120.0.36.2
+    cap_add:
+      - NET_ADMIN
+
+  Serveur_Entreprise_1:
+    image: alpine
+    container_name: Serveur_Entreprise_1
+    volumes:
+      - ./config/Serveur_Entreprise_1:/var/www/html
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.20.1 && apk add --no-cache python3 && cd /var/www/html && python3 -m http.server 80"
+    networks:
+      net_dmz:
+        ipv4_address: 10.10.20.2
+    cap_add:
+      - NET_ADMIN
+
+  Serveur_VoIP:
+    image: andrius/asterisk:20
+    container_name: Serveur_VoIP
+    user: root
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./config/Serveur_VoIP:/etc/asterisk
+    networks:
+      net_dmz:
+        ipv4_address: 10.10.20.20
+    # Use full paths and ensure the script doesn't fail silently
+    command: >
+      /bin/sh -c " apt-get update && apt-get install -y iproute2; ip route del default; ip route add default via 10.10.20.1; exec asterisk -fvvvc "
+
+  Serveur_VPN_Ent1:
+    image: alpine
+    container_name: Serveur_VPN_Ent1
+    privileged: true
+    volumes:
+      - ./VPN_Build:/vpn
+    # Ajout du forwarding au niveau du noyau via sysctls
+    sysctls:
+      - net.ipv4.ip_forward=1
+    command: /bin/sh -c "apk add --no-cache python3 iptables tcpdump && ip route del default || true; ip route add default via 10.10.20.1 && python3 /vpn/vpn_server.py"
+    networks:
+      net_dmz:
+        ipv4_address: 10.10.20.10
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  DNS_Ent_1:
+    image: alpine
+    container_name: DNS_Ent_1
+    volumes:
+      - ./config/DNS_Ent_1/dnsmasq.conf:/etc/dnsmasq.conf
+      - ./config/DNS_Ent_1/hosts:/etc/dnsmasq.hosts
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.20.1 && apk add --no-cache dnsmasq && dnsmasq -k -C /etc/dnsmasq.conf"
+    networks:
+      net_dmz:
+        ipv4_address: 10.10.20.3
+    cap_add:
+      - NET_ADMIN
+
+  Serveur_Interne_RH:
+    image: alpine
+    container_name: Serveur_Interne_RH
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.10.10.1 && apk add --no-cache python3 && echo 'ACCÈS RÉSERVÉ RH' > index.html && python3 -m http.server 80"
+    networks:
+      net_lan:
+        ipv4_address: 10.10.10.5
+    cap_add:
+      - NET_ADMIN
+  Serveur_FTP_Public:
+    image: delfer/alpine-ftp-server
+    container_name: Serveur_FTP_Public
+    environment:
+      - FTP_USER=public
+      - FTP_PASS=password123
+    networks:
+      net_37:
+        ipv4_address: 120.0.37.5
+    cap_add:
+      - NET_ADMIN
+    # Routeur du deuxième site (Branche)
+  R_Entreprise2:
+    image: frrouting/frr
+    container_name: R_Entreprise2
+    privileged: true
+    volumes:
+      - ./config/R_Entreprise2:/etc/frr
+    networks:
+      net_44:
+        ipv4_address: 120.0.44.2
+      net_ent2_lan:
+        ipv4_address: 10.20.10.9
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  # Routeur Interne LAN Ent2 (Nouveau)
+  R_Ent2_LAN:
+    image: frrouting/frr
+    container_name: R_Ent2_LAN
+    privileged: true
+    volumes:
+      - ./config/R_Ent2_LAN:/etc/frr
+    networks:
+      net_ent2_lan:
+        ipv4_address: 10.20.10.253
+      net_lan_as2:
+        ipv4_address: 20.20.20.1
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  # Gateway VPN pour Site-to-Site (Ent2)
+  VPN_Gateway_Ent2:
+    image: alpine
+    container_name: VPN_Gateway_Ent2
+    privileged: true
+    volumes:
+      - ./VPN_Build:/vpn
+    # Command: Install python, add route to gateway, run client script (adapted)
+    command: /bin/sh -c "apk add --no-cache python3 iptables && ip route del default || true; ip route add default via 10.20.10.9 && python3 /vpn/vpn_client_site.py"
+    networks:
+      net_ent2_lan:
+        ipv4_address: 10.20.10.10
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+
+  # Client sur le deuxième site (Déplacé dans LAN AS2)
+  Client1_Ent2:
+    image: alpine
+    container_name: Client1_Ent_Site2
+    command: /bin/sh -c "ip route del default || true; ip route add default via 20.20.20.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    networks:
+      net_lan_as2:
+        ipv4_address: 20.20.20.2
+    cap_add:
+      - NET_ADMIN
+
+  Client2_Ent2:
+    image: alpine
+    container_name: Client2_Ent_Site2
+    command: /bin/sh -c "ip route del default || true; ip route add default via 10.20.10.1 && echo 'nameserver 120.0.36.2' > /etc/resolv.conf && sleep infinity"
+    networks:
+      - net_ent2_lan
+    cap_add:
+      - NET_ADMIN
+
+  DHCP_Ent2:
+    image: alpine
+    container_name: DHCP_Ent2
+    command: /bin/sh -c "apk add --no-cache dnsmasq && dnsmasq -k -C /etc/dnsmasq.conf"
+    networks:
+      net_ent2_lan:
+        ipv4_address: 10.20.10.250
+    volumes:
+      - ./config/DHCP_Ent2/dnsmasq.conf:/etc/dnsmasq.conf
+    cap_add:
+      - NET_ADMIN
